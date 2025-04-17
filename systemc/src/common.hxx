@@ -9,6 +9,8 @@
 namespace streebog_hw
 {
 
+constexpr unsigned long long DEFAULT_GPLD_ADDR = 0;
+
 /**
     @brief      S-box, as defined in the chapter 5.1 of The Standard. It is used for
                 S-transformation.

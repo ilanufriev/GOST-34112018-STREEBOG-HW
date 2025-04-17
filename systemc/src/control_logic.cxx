@@ -1,3 +1,7 @@
+#include "control_logic.hxx"
+#include "payloads.hxx"
+#include <common.hxx>
+#include <string>
 #include <utils.hxx>
 #include <systemc>
 #include <tlm_core/tlm_2/tlm_generic_payload/tlm_gp.h>
@@ -7,31 +11,34 @@
 namespace streebog_hw
 {
 
-struct ControlLogic : public sc_core::sc_module
+ControlLogic::ControlLogic(sc_core::sc_module_name const& name)
+    : ctx_next_i("ctx_i")
+    , block_i("block_i")
 {
-    ControlLogic(sc_core::sc_module_name const& name)
-        : socket("socket")
+    for (unsigned long long i = 0; i < STAGES_COUNT; i++)
     {
-        socket.register_nb_transport_bw(this, &ControlLogic::nb_transport_bw);
+        block_o[i] = new sc_core::sc_export<sc_core::sc_signal_out_if<gost_u512>>((std::string("block_o ") + std::to_string(i)).c_str());
+        ctx_o  [i] = new sc_core::sc_export<sc_core::sc_signal_out_if<gost_algctx>>((std::string("ctx_o") + std::to_string(i)).c_str());
+
+        block_o[i]->bind(block_[i]);
+        ctx_o  [i]->bind(ctx_[i]);
     }
+
+    SC_THREAD(thread);
+}
+
+void ControlLogic::thread()
+{
     
-    tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload &payload, 
-                                       tlm::tlm_phase           &phase, 
-                                       sc_core::sc_time         &delta)
-    {
-        METHOD_NOT_IMPLEMENTED;
-        return tlm::tlm_sync_enum::TLM_COMPLETED;
-    }
+}
 
-    void control_logic_thread()
+ControlLogic::~ControlLogic()
+{
+    for (unsigned long long i = 0; i < STAGES_COUNT; i++)
     {
-        tlm::tlm_generic_payload payload;
-        payload.set_address(0);
-        payload.set_command(tlm::tlm_command::TLM_READ_COMMAND);
-        payload.set_data_ptr(unsigned char *data)
+        delete block_o[i];
+        delete ctx_o  [i];
     }
-
-    tlm_utils::simple_initiator_socket<ControlLogic> socket;
-};
+}
 
 };
