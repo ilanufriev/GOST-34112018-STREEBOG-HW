@@ -1,0 +1,3 @@
+[submodule "sw"]
+	path = sw
+	url = git@github.com:ilanufriev/GOST-34112018-STREEBOG.git
