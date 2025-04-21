@@ -9,6 +9,14 @@
 namespace streebog_hw
 {
 
+/**
+    @brief      Clock cycle duration in nanoseconds.
+ */
+constexpr unsigned long long CLOCK_CYCLE_NS = 10;
+
+/**
+    @brief      Default address for TLM-2.0 transactions.
+ */
 constexpr unsigned long long DEFAULT_GPLD_ADDR = 0;
 
 /**
@@ -57,5 +65,11 @@ extern const gost_u512 INIT_VECTOR_512;
 
 extern const gost_u512 ZERO_VECTOR_512;
 
+inline void wait_clk(unsigned int clock_cycles)
+{
+    ::sc_core::wait(sc_core::sc_time(static_cast<int>(CLOCK_CYCLE_NS * clock_cycles), sc_core::SC_NS));
 }
+
+}
+
 #endif // __COMMON_HXX__

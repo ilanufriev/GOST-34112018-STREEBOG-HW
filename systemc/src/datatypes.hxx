@@ -24,6 +24,12 @@ using gost_i32  = sc_dt::sc_int<32>;
 using gost_i16  = sc_dt::sc_int<16>;
 using gost_i8   = sc_dt::sc_int<8>;
 
+template < typename T >
+using out_export = sc_core::sc_export<sc_core::sc_signal_out_if<T>>;
+
+template < typename T >
+using in_port = sc_core::sc_port<sc_core::sc_signal_in_if<T>>;
+
 };
 
 #endif // __DATATYPES_HXX__
