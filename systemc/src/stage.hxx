@@ -4,28 +4,44 @@
 #include <datatypes.hxx>
 #include <common.hxx>
 #include <systemc>
-#include <gost34112018.h>
 
 namespace streebog_hw
 {
 
 struct Stage : public sc_core::sc_module
 {
+    enum class State {
+        CLEAR,
+        BUSY,
+        DONE
+    };
+
     Stage(sc_core::sc_module_name const &name);
 
     void thread();
+    void stage2();
+    void stage3();
 
-    in_port<gost_u512> st_block_i;
-    in_port<gost_u8>   st_block_size_i;
-    in_port<gost_u512> sigma_i;
-    in_port<gost_u512> n_i;
-    in_port<gost_u512> h_i;
-    in_port<bool>      st_ack_i;
-    in_port<bool>      st_start_i;
-    in_port<bool>      st_sel_i;
+    in_port<u512> block_i;
+    in_port<u8>   block_size_i;
+    in_port<u512> sigma_i;
+    in_port<u512> n_i;
+    in_port<u512> h_i;
+    in_port<bool> ack_i;
+    in_port<bool> start_i;
+    in_port<bool> sel_i;
     
-    out_export<
+    out_export<u512>  sigma_nx_o;
+    out_export<u512>  n_nx_o;
+    out_export<u512>  h_nx_o;
+    out_export<State> state_o;
+
 private:
+
+    sc_core::sc_signal<u512>  sigma_nx_s_;
+    sc_core::sc_signal<u512>  n_nx_s_;
+    sc_core::sc_signal<u512>  h_nx_s_;
+    sc_core::sc_signal<State> state_s_;
 };
 
 }

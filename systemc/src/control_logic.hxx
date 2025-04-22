@@ -1,8 +1,9 @@
 #ifndef __CONTROL_LOGIC_HXX__
 #define __CONTROL_LOGIC_HXX__
 
-#include "datatypes.hxx"
+#include <datatypes.hxx>
 #include <systemc>
+#include <stage.hxx>
 
 namespace streebog_hw
 {
@@ -27,53 +28,53 @@ struct ControlLogic : public sc_core::sc_module
     void thread();
 
     // Initiator side of I/O
-    in_port<bool>         start_i;
-    in_port<bool>         reset_i;
-    in_port<gost_u512>    block_i;
-    in_port<gost_u8>      block_size_i;
-    in_port<bool>         hash_size_i;
-    in_port<bool>         ack_i;
+    in_port<bool> start_i;
+    in_port<bool> reset_i;
+    in_port<u512> block_i;
+    in_port<u8>   block_size_i;
+    in_port<bool> hash_size_i;
+    in_port<bool> ack_i;
     
-    out_export<State>     state_o;
-    out_export<gost_u512> hash_o;
+    out_export<State> state_o;
+    out_export<u512>  hash_o;
 
-    // Stage blocks side of I/O
-    in_port<gost_u512>    sigma_nx_i;
-    in_port<gost_u512>    n_nx_i;
-    in_port<gost_u512>    h_nx_i;
-    in_port<State>        st_state_i;
+    // Stage block side of I/O
+    in_port<u512>         sigma_nx_i;
+    in_port<u512>         n_nx_i;
+    in_port<u512>         h_nx_i;
+    in_port<Stage::State> st_state_i;
 
-    out_export<gost_u512> st_block_o;
-    out_export<gost_u8>   st_block_size_o;
-    out_export<gost_u512> sigma_o;
-    out_export<gost_u512> n_o;
-    out_export<gost_u512> h_o;
-    out_export<bool>      st_ack_o;
-    out_export<bool>      st_start_o;
-    out_export<bool>      st_sel_o;
+    out_export<u512> st_block_o;
+    out_export<u8>   st_block_size_o;
+    out_export<u512> sigma_o;
+    out_export<u512> n_o;
+    out_export<u512> h_o;
+    out_export<bool> st_ack_o;
+    out_export<bool> st_start_o;
+    out_export<bool> st_sel_o;
 
     ~ControlLogic();
 
 private:
-    gost_u512 block_;
-    gost_u8   block_size_;
-    bool      hash_size_;
+    u512 block_;
+    u8   block_size_;
+    bool hash_size_;
 
-    gost_u512 sigma_;
-    gost_u512 h_;
-    gost_u512 n_;
+    u512 sigma_;
+    u512 h_;
+    u512 n_;
 
-    sc_core::sc_signal<State>     state_s_;
-    sc_core::sc_signal<gost_u512> hash_s_;
+    sc_core::sc_signal<State> state_s_;
+    sc_core::sc_signal<u512>  hash_s_;
 
-    sc_core::sc_signal<gost_u512> st_block_s_;
-    sc_core::sc_signal<gost_u8>   st_block_size_s_;
-    sc_core::sc_signal<gost_u512> sigma_s_;
-    sc_core::sc_signal<gost_u512> n_s_;
-    sc_core::sc_signal<gost_u512> h_s_;
-    sc_core::sc_signal<bool>      st_ack_s_;
-    sc_core::sc_signal<bool>      st_start_s_;
-    sc_core::sc_signal<bool>      st_sel_s_;
+    sc_core::sc_signal<u512>  st_block_s_;
+    sc_core::sc_signal<u8>    st_block_size_s_;
+    sc_core::sc_signal<u512>  sigma_s_;
+    sc_core::sc_signal<u512>  n_s_;
+    sc_core::sc_signal<u512>  h_s_;
+    sc_core::sc_signal<bool>  st_ack_s_;
+    sc_core::sc_signal<bool>  st_start_s_;
+    sc_core::sc_signal<bool>  st_sel_s_;
 };
 
 }
