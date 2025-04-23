@@ -8,13 +8,15 @@
     __obj(#__obj)
 
 #define WAIT_WHILE(__condition) \
-    while(__condition) wait_clk(1);
+    while(__condition) { streebog_hw::wait_clk(1); }
 
 #define __ENABLE_DEBUG_MESSAGES__
 #ifdef __ENABLE_DEBUG_MESSAGES__
 
+#define DEBUG_OUT_ENABLED 1
+
 #define DEBUG_OUT \
-    std::cerr << "[DEBUG] from " << __func__ << ", line " << __LINE__ << ": "
+    if (DEBUG_OUT_ENABLED) std::cerr << "[DEBUG] from " << __func__ << ", line " << __LINE__ << ": "
 #else
     if (0) std::cerr
 #endif // __ENABLE_DEBUG_MESSAGES__

@@ -10,7 +10,7 @@ namespace streebog_hw
 
 struct Stage : public sc_core::sc_module
 {
-    enum class State {
+    enum State {
         CLEAR,
         BUSY,
         DONE
@@ -21,7 +21,7 @@ struct Stage : public sc_core::sc_module
     void thread();
     void stage2();
     void stage3();
-
+    
     in_port<u512> block_i;
     in_port<u8>   block_size_i;
     in_port<u512> sigma_i;
@@ -37,6 +37,8 @@ struct Stage : public sc_core::sc_module
     out_export<State> state_o;
 
 private:
+
+    void advance_state(State next_state);
 
     sc_core::sc_signal<u512>  sigma_nx_s_;
     sc_core::sc_signal<u512>  n_nx_s_;

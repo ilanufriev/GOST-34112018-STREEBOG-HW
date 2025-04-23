@@ -11,7 +11,7 @@ namespace streebog_hw
 struct ControlLogic : public sc_core::sc_module
 {
     
-    enum class State
+    enum State
     {
         CLEAR,
         BUSY,
@@ -53,9 +53,9 @@ struct ControlLogic : public sc_core::sc_module
     out_export<bool> st_start_o;
     out_export<bool> st_sel_o;
 
-    ~ControlLogic();
-
 private:
+    void advance_state(State next_state);
+
     u512 block_;
     u8   block_size_;
     bool hash_size_;

@@ -1,4 +1,5 @@
 #include <control_logic.hxx>
+#include <iterator>
 #include <utils.hxx>
 #include <common.hxx>
 #include <string>
@@ -37,19 +38,27 @@ ControlLogic::ControlLogic(sc_core::sc_module_name const &name)
     st_block_size_o.bind(st_block_size_s_);
     sigma_o.bind(sigma_s_);
     n_o.bind(n_s_);
-    h_o.bind(h_o);
+    h_o.bind(h_s_);
     st_ack_o.bind(st_ack_s_);
     st_start_o.bind(st_start_s_);
     st_sel_o.bind(st_sel_s_);
 
     state_s_.write(ControlLogic::State::CLEAR);
+    hash_s_.write(0);
+    st_block_s_.write(0);
+    st_block_size_s_.write(0);
+    sigma_s_.write(0);
+    n_s_.write(0);
+    h_s_.write(0);
+    st_ack_s_.write(0);
+    st_start_s_.write(0);
+    st_sel_s_.write(0);
 
     SC_THREAD(thread);
 }
 
 void ControlLogic::thread()
 {
-    State next_state;
     while (true)
     {
         switch (state_s_.read())
@@ -63,12 +72,14 @@ void ControlLogic::thread()
                     n_     = 0;
                     h_     = hash_size_ == 0 ? INIT_VECTOR_512 
                                              : INIT_VECTOR_256;
-                    state_s_ = State::BUSY;
 
+                    advance_state(State::BUSY);
                     break;
                 }
             case State::BUSY:
                 {
+                    State next_state;
+
                     DEBUG_OUT << "State BUSY" << std::endl;
                     block_      = block_i->read();
                     block_size_ = block_i->read();
@@ -82,7 +93,7 @@ void ControlLogic::thread()
                     else 
                     {
                         st_sel_s_.write(1);
-                        next_state = State::BUSY;
+                        next_state = State::DONE;
                     }
 
                     sigma_s_.write(sigma_);
@@ -94,23 +105,27 @@ void ControlLogic::thread()
                     
                     st_start_s_.write(1);
 
-                    WAIT_WHILE(st_state_i->read() != State::BUSY);
+                    WAIT_WHILE(st_state_i->read() != Stage::State::BUSY);
 
                     st_start_s_.write(0);
 
-                    WAIT_WHILE(st_state_i->read() != State::DONE);
+                    WAIT_WHILE(st_state_i->read() != Stage::State::DONE);
 
                     sigma_ = sigma_nx_i->read();
                     n_     = n_nx_i->read();
                     h_     = h_nx_i->read();
+                    
+                    DEBUG_OUT << sigma_nx_i->read() << std::endl;
+                    DEBUG_OUT << n_nx_i->read() << std::endl;
+                    DEBUG_OUT << h_nx_i->read() << std::endl;
 
                     st_ack_s_.write(1);
                     
-                    WAIT_WHILE(st_state_i->read() != State::CLEAR);
+                    WAIT_WHILE(st_state_i->read() != Stage::State::CLEAR);
 
                     st_ack_s_.write(0);
                     
-                    state_s_.write(next_state);
+                    advance_state(next_state);
                     break;
                 }
             case State::READY:
@@ -118,7 +133,7 @@ void ControlLogic::thread()
                     DEBUG_OUT << "State READY" << std::endl;
                     WAIT_WHILE(start_i->read() == 0);
 
-                    state_s_.write(State::BUSY);
+                    advance_state(State::DONE);
                     break;
                 }
             case State::DONE:
@@ -126,11 +141,17 @@ void ControlLogic::thread()
                     DEBUG_OUT << "State DONE" << std::endl;
                     WAIT_WHILE(ack_i->read() == 0);
 
-                    state_s_.write(State::CLEAR);
+                    advance_state(State::CLEAR);
                     break;
                 }
         }
     }
+}
+
+void ControlLogic::advance_state(State next_state)
+{
+    state_s_.write(next_state);
+    WAIT_WHILE(state_s_.read() != next_state);
 }
 
 };

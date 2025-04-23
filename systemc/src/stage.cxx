@@ -1,14 +1,15 @@
-#include <array>
-#include <cstddef>
+#include <iterator>
 #include <systemc>
 #include <iostream>
 #include <utils.hxx>
 #include <stage.hxx>
 #include <gost34112018.h>
 
+#undef DEBUG_OUT_ENABLED
+#define DEBUG_OUT_ENABLED 1
+
 namespace streebog_hw
 {
-
 
 /*
     Idk how fast it is, but it's for testing only
@@ -50,6 +51,8 @@ Stage::Stage(sc_core::sc_module_name const &name)
     n_nx_o.bind(n_nx_s_);
     h_nx_o.bind(h_nx_s_);
     state_o.bind(state_s_);
+
+    SC_THREAD(thread);
 }
 
 void Stage::thread()
@@ -64,16 +67,19 @@ void Stage::thread()
         {
             case State::CLEAR:
                 {
-                    WAIT_WHILE(start_i->read() != 0);
+                    DEBUG_OUT << "Stage is now at CLEAR\n";
+                    WAIT_WHILE(start_i->read() == 0);
                     
                     sc_uint512_to_c_array(ctx.N, n_i->read());
                     sc_uint512_to_c_array(ctx.h, h_i->read());
                     sc_uint512_to_c_array(ctx.sigma, sigma_i->read());
 
+                    advance_state(State::BUSY);
                     break;
                 }
             case State::BUSY:
                 {
+                    DEBUG_OUT << "Stage is now at BUSY\n";
                     sc_uint512_to_c_array(block, block_i->read());
                     
                     block_size = block_size_i->read().to_uint() & 0xFF;
@@ -84,12 +90,15 @@ void Stage::thread()
                     h_nx_s_.write(c_array_to_sc_uint512(ctx.h));
                     n_nx_s_.write(c_array_to_sc_uint512(ctx.N));
 
-                    state_s_.write(State::DONE);
+                    advance_state(State::DONE);
                     break;
                 }
             case State::DONE:
                 {
+                    DEBUG_OUT << "Stage is now at DONE\n";
                     WAIT_WHILE(ack_i->read() != 0);
+                    
+                    advance_state(State::CLEAR);
                     break;
                 }
         }
@@ -104,6 +113,12 @@ void Stage::stage2()
 void Stage::stage3()
 {
     METHOD_NOT_IMPLEMENTED;
+}
+
+void Stage::advance_state(State next_state)
+{
+    state_s_.write(next_state);
+    WAIT_WHILE(state_s_.read() != next_state);
 }
 
 };

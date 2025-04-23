@@ -5,6 +5,7 @@
 #define __COMMON_HXX__
 
 #include "datatypes.hxx"
+#include "utils.hxx"
 
 namespace streebog_hw
 {
