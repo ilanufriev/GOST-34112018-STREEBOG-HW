@@ -67,10 +67,10 @@ void ControlLogic::thread()
                 {
                     DEBUG_OUT << "State CLEAR" << std::endl;
                     WAIT_WHILE(start_i->read() == 0);
-                    
+
                     sigma_ = 0;
                     n_     = 0;
-                    h_     = hash_size_ == 0 ? INIT_VECTOR_512 
+                    h_     = hash_size_ == 0 ? INIT_VECTOR_512
                                              : INIT_VECTOR_256;
 
                     advance_state(State::BUSY);
@@ -82,7 +82,7 @@ void ControlLogic::thread()
 
                     DEBUG_OUT << "State BUSY" << std::endl;
                     block_      = block_i->read();
-                    block_size_ = block_i->read();
+                    block_size_ = block_size_i->read();
                     hash_size_  = hash_size_i->read();
 
                     if (block_size_ == 64)
@@ -90,7 +90,7 @@ void ControlLogic::thread()
                         st_sel_s_.write(0);
                         next_state = State::READY;
                     }
-                    else 
+                    else
                     {
                         st_sel_s_.write(1);
                         next_state = State::DONE;
@@ -100,9 +100,11 @@ void ControlLogic::thread()
                     n_s_.write(n_);
                     h_s_.write(h_);
 
+                    DEBUG_OUT << "block_size_ = " << block_size_ << std::endl;
+
                     st_block_s_.write(block_);
                     st_block_size_s_.write(block_size_);
-                    
+
                     st_start_s_.write(1);
 
                     WAIT_WHILE(st_state_i->read() != Stage::State::BUSY);
@@ -114,17 +116,22 @@ void ControlLogic::thread()
                     sigma_ = sigma_nx_i->read();
                     n_     = n_nx_i->read();
                     h_     = h_nx_i->read();
-                    
-                    DEBUG_OUT << sigma_nx_i->read() << std::endl;
-                    DEBUG_OUT << n_nx_i->read() << std::endl;
-                    DEBUG_OUT << h_nx_i->read() << std::endl;
+
+                    DEBUG_OUT << "sigma_nx_i = " << sigma_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
+                    DEBUG_OUT << "n_nx_i = " << n_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
+                    DEBUG_OUT << "h_nx_i = " << h_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
 
                     st_ack_s_.write(1);
-                    
+
                     WAIT_WHILE(st_state_i->read() != Stage::State::CLEAR);
 
                     st_ack_s_.write(0);
-                    
+
+                    if (next_state == State::DONE)
+                    {
+                        hash_o->write(h_);
+                    }
+
                     advance_state(next_state);
                     break;
                 }

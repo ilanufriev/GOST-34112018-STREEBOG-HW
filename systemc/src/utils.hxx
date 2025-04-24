@@ -1,6 +1,8 @@
 #ifndef __UTILS_HPP__
 #define __UTILS_HPP__
 
+#include <datatypes.hxx>
+
 #define METHOD_NOT_IMPLEMENTED \
     std::cerr << "Method " << __func__ << " was called but is not implemented." << std::endl
 
@@ -16,9 +18,20 @@
 #define DEBUG_OUT_ENABLED 1
 
 #define DEBUG_OUT \
-    if (DEBUG_OUT_ENABLED) std::cerr << "[DEBUG] from " << __func__ << ", line " << __LINE__ << ": "
+    if (DEBUG_OUT_ENABLED) std::cerr << "[DEBUG] from " << __PRETTY_FUNCTION__ << ", line " << __LINE__ << ": "
 #else
     if (0) std::cerr
 #endif // __ENABLE_DEBUG_MESSAGES__
+
+namespace streebog_hw
+{
+
+u512 bytes_to_sc_uint512(const unsigned char *bytes, const int32_t block_size);
+
+std::string byte_to_hex_string(const unsigned char num, const std::string prefix = "");
+
+void sc_uint512_to_bytes(unsigned char *bytes, const std::size_t bytes_size, u512 from);
+
+}
 
 #endif // __UTILS_HPP__

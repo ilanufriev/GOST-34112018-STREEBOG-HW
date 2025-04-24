@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <iterator>
 #include <systemc>
 #include <iostream>
@@ -10,28 +11,6 @@
 
 namespace streebog_hw
 {
-
-/*
-    Idk how fast it is, but it's for testing only
- */
-void sc_uint512_to_c_array(unsigned char *dst, const u512 &number)
-{
-    for (int i = 0; i < 64; i++)
-    {
-        dst[i] = (number >> (i * 8)).to_int() & 0xFF;
-    }
-}
-
-u512 c_array_to_sc_uint512(const unsigned char *from)
-{
-    u512 result = 0;
-    for (int i = 0; i < 64; i++)
-    {
-        result <<= 8 * i;
-        result |= from[i];
-    }
-    return result;
-}
 
 Stage::Stage(sc_core::sc_module_name const &name)
     : AUTONAME(block_i)
@@ -69,10 +48,10 @@ void Stage::thread()
                 {
                     DEBUG_OUT << "Stage is now at CLEAR\n";
                     WAIT_WHILE(start_i->read() == 0);
-                    
-                    sc_uint512_to_c_array(ctx.N, n_i->read());
-                    sc_uint512_to_c_array(ctx.h, h_i->read());
-                    sc_uint512_to_c_array(ctx.sigma, sigma_i->read());
+
+                    sc_uint512_to_bytes(ctx.N, 64, n_i->read());
+                    sc_uint512_to_bytes(ctx.h, 64, h_i->read());
+                    sc_uint512_to_bytes(ctx.sigma, 64, sigma_i->read());
 
                     advance_state(State::BUSY);
                     break;
@@ -80,15 +59,42 @@ void Stage::thread()
             case State::BUSY:
                 {
                     DEBUG_OUT << "Stage is now at BUSY\n";
-                    sc_uint512_to_c_array(block, block_i->read());
-                    
+                    sc_uint512_to_bytes(block, 64, block_i->read());
+
                     block_size = block_size_i->read().to_uint() & 0xFF;
 
-                    GOST34112018_HashBlock(block, block_size, &ctx);
+                    DEBUG_OUT << "block_size_i = " << block_size_i->read() << std::endl;
+                    DEBUG_OUT << "Block size = " << static_cast<int>(block_size) << std::endl;
 
-                    sigma_nx_s_.write(c_array_to_sc_uint512(ctx.sigma));
-                    h_nx_s_.write(c_array_to_sc_uint512(ctx.h));
-                    n_nx_s_.write(c_array_to_sc_uint512(ctx.N));
+                    DEBUG_OUT << "block = ";
+                    for (int i = 0; i < 64; i++)
+                        fprintf(stderr, "%02x", block[i]);
+
+                    std::cerr << std::endl;
+
+                    GOST34112018_HashBlock(block, block_size, &ctx);
+                    
+                    DEBUG_OUT << "ctx.N = ";
+                    for (int i = 0; i < 64; i++)
+                        fprintf(stderr, "%02x", ctx.N[i]);
+
+                    std::cerr << std::endl;
+
+                    DEBUG_OUT << "ctx.h = ";
+                    for (int i = 0; i < 64; i++)
+                        fprintf(stderr, "%02x", ctx.h[i]);
+
+                    std::cerr << std::endl;
+
+                    DEBUG_OUT << "ctx.sigma = ";
+                    for (int i = 0; i < 64; i++)
+                        fprintf(stderr, "%02x", ctx.sigma[i]);
+
+                    std::cerr << std::endl;
+
+                    sigma_nx_s_.write(bytes_to_sc_uint512(ctx.sigma, 64));
+                    h_nx_s_.write(bytes_to_sc_uint512(ctx.h, 64));
+                    n_nx_s_.write(bytes_to_sc_uint512(ctx.N, 64));
 
                     advance_state(State::DONE);
                     break;
@@ -97,7 +103,7 @@ void Stage::thread()
                 {
                     DEBUG_OUT << "Stage is now at DONE\n";
                     WAIT_WHILE(ack_i->read() != 0);
-                    
+
                     advance_state(State::CLEAR);
                     break;
                 }
