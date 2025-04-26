@@ -27,9 +27,21 @@ void sc_uint512_to_bytes(unsigned char *bytes, const std::size_t bytes_size, u51
     }
 }
 
+std::string bytes_to_hex_string(const unsigned char *bytes, const int64_t bytes_size, const std::string prefix)
+{
+    std::ostringstream os;
+    os << prefix;
+    for (int64_t i = 0; i < bytes_size; i++)
+    {
+        os << byte_to_hex_string(bytes[i]);
+    }
+    return os.str();
+}
+
 std::string byte_to_hex_string(const unsigned char num, const std::string prefix)
 {
     std::ostringstream os;
+    os << prefix;
     os << std::hex << std::setw(2) << (+num & 0xFF);
     return os.str();
 }

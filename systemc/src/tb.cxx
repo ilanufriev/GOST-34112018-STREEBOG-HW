@@ -1,12 +1,13 @@
 #include <boost/program_options.hpp>
+#include <boost/program_options/value_semantic.hpp>
 #include <common.hxx>
 #include <control_logic.hxx>
 #include <datatypes.hxx>
+#include <ostream>
 #include <utils.hxx>
 #include <iomanip>
 #include <sstream>
 #include <stage.hxx>
-
 #include <iostream>
 
 constexpr int32_t BLOCK_SIZE = 64;
@@ -53,6 +54,7 @@ int sc_main(int argc, char **argv)
         ("help", "produce help message")
         ("hash-size,s", po::value<int>(), "Size of the produced hash (512 or 256, 512 is default)")
         ("input-file,i", po::value<std::vector<std::string>>(), "A file from which data will be read")
+        ("big-endian", "Print hash in big-endian format (little-endian is default)")
     ;
 
     po::variables_map args;
@@ -60,6 +62,7 @@ int sc_main(int argc, char **argv)
     po::notify(args);
 
     std::string input_file;
+    int hash_size_int = 512;
     bool hash_size_opt = 0;
 
     if (args.count("help"))
@@ -70,14 +73,14 @@ int sc_main(int argc, char **argv)
 
     if (args.count("hash-size") != 0)
     {
-        int tmp = args.at("hash-size").as<int>();
-        if (tmp != 256 && tmp != 512)
+        hash_size_int = args.at("hash-size").as<int>();
+        if (hash_size_int != 256 && hash_size_int != 512)
         {
             std::cout << "Wrong hash size. Choose either 512 or 256.\n";
             return 1;
         }
 
-        hash_size_opt = tmp == 256 ? 1 : 0;
+        hash_size_opt = hash_size_int == 256 ? 1 : 0;
     }
 
     if (args.count("input-file") == 0)
@@ -152,11 +155,19 @@ int sc_main(int argc, char **argv)
     sc_core::sc_start(0, sc_core::SC_NS);
 
     int32_t rc = 0;
-    int32_t last_block_size = 0;
+    int32_t last_block_size = 64;
 
     while (!fin.eof())
     {
         DEBUG_OUT << "Read started\n";
+        
+        // I know that this is very dirty, but the entire library
+        // libgost34112018 uses unsigned values since they represent 
+        // abstract bits. The library also makes use of the overflow
+        // mechanism of unsigned numbers to implement 2^512 modulo 
+        // addition. So I have to do this cast to just read bytes
+        // into a buffer of **unsigned** chars, while the fin.read()
+        // only supports usual (signed) chars. God forgive me.
         fin.read(reinterpret_cast<char *>(buffer.data() + rc), buffer.size() - rc);
         rc = fin.gcount();
 
@@ -181,23 +192,52 @@ int sc_main(int argc, char **argv)
         int i;
         for (i = 0; (i + BLOCK_SIZE) < rc; i += BLOCK_SIZE)
         {
+            DEBUG_OUT << "Hashing block #" << (i + 1) << std::endl;
             hash_block(buffer.data() + i, BLOCK_SIZE, hash_size_opt);
             last_block_size = BLOCK_SIZE;
         }
+
+        DEBUG_OUT << "Hashing the last block" << std::endl;
 
         // Hash the rest of the message
         hash_block(buffer.data() + i, rc - i, hash_size_opt);
         last_block_size = rc - i;
     }
 
+    // To correctly end the hashing, we need to send zero-length
+    // if the data size is divisible by 64
     if (last_block_size == BLOCK_SIZE)
     {
         DEBUG_OUT << "Ending the hashing" << std::endl;
         hash_block(nullptr, 0, hash_size_opt);
     }
 
-    std::cout << "hash = " << cl.hash_o->read().to_string(sc_dt::SC_HEX) << std::endl;
+    // Format the input: print them in the right order
+    std::string hash_str;
+    std::array<unsigned char, BLOCK_SIZE> hash_bytes;
+    streebog_hw::sc_uint512_to_bytes(hash_bytes.data(), hash_bytes.size(), cl.hash_o->read());
+    std::ostringstream hash_os;
+    hash_os << std::hex << std::setw(2) << std::setfill('0');
 
+    if (args.count("big-endian"))
+    {
+        for (int i = 0; i < (hash_size_int / 8); i++)
+        {
+            hash_os << std::hex << std::setw(2) << std::setfill('0') << (static_cast<int>(hash_bytes[(hash_size_int / 8) - 1 - i]) & 0xFF);
+        }
+        hash_str = hash_os.str();
+    }
+    else
+    {
+        std::ostringstream os;
+        for (int i = 0; i < (hash_size_int / 8); i++)
+        {
+            hash_os << std::hex << std::setw(2) << (static_cast<int>(hash_bytes[i]) & 0xFF);
+        }
+        hash_str = hash_os.str();
+    }
+
+    std::cout << hash_str << std::endl;
     ack.write(1);
 
     ADVANCE_WHILE(cl.state_o->read() != streebog_hw::ControlLogic::State::CLEAR);

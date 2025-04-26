@@ -8,7 +8,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 
 add_executable(gost34112018_test
-    src/build.cxx
+    src/common.cxx
+    src/control_logic.cxx
+    src/stage.cxx
+    src/tb.cxx
+    src/utils.cxx
 )
 
 target_include_directories(gost34112018_test PRIVATE

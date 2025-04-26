@@ -68,6 +68,8 @@ void ControlLogic::thread()
                     DEBUG_OUT << "State CLEAR" << std::endl;
                     WAIT_WHILE(start_i->read() == 0);
 
+                    hash_size_ = hash_size_i->read();
+
                     sigma_ = 0;
                     n_     = 0;
                     h_     = hash_size_ == 0 ? INIT_VECTOR_512
@@ -83,7 +85,6 @@ void ControlLogic::thread()
                     DEBUG_OUT << "State BUSY" << std::endl;
                     block_      = block_i->read();
                     block_size_ = block_size_i->read();
-                    hash_size_  = hash_size_i->read();
 
                     if (block_size_ == 64)
                     {
@@ -99,8 +100,6 @@ void ControlLogic::thread()
                     sigma_s_.write(sigma_);
                     n_s_.write(n_);
                     h_s_.write(h_);
-
-                    DEBUG_OUT << "block_size_ = " << block_size_ << std::endl;
 
                     st_block_s_.write(block_);
                     st_block_size_s_.write(block_size_);
@@ -140,7 +139,7 @@ void ControlLogic::thread()
                     DEBUG_OUT << "State READY" << std::endl;
                     WAIT_WHILE(start_i->read() == 0);
 
-                    advance_state(State::DONE);
+                    advance_state(State::BUSY);
                     break;
                 }
             case State::DONE:

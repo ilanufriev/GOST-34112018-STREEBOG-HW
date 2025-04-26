@@ -63,34 +63,11 @@ void Stage::thread()
 
                     block_size = block_size_i->read().to_uint() & 0xFF;
 
-                    DEBUG_OUT << "block_size_i = " << block_size_i->read() << std::endl;
-                    DEBUG_OUT << "Block size = " << static_cast<int>(block_size) << std::endl;
-
-                    DEBUG_OUT << "block = ";
-                    for (int i = 0; i < 64; i++)
-                        fprintf(stderr, "%02x", block[i]);
-
-                    std::cerr << std::endl;
-
                     GOST34112018_HashBlock(block, block_size, &ctx);
                     
-                    DEBUG_OUT << "ctx.N = ";
-                    for (int i = 0; i < 64; i++)
-                        fprintf(stderr, "%02x", ctx.N[i]);
-
-                    std::cerr << std::endl;
-
-                    DEBUG_OUT << "ctx.h = ";
-                    for (int i = 0; i < 64; i++)
-                        fprintf(stderr, "%02x", ctx.h[i]);
-
-                    std::cerr << std::endl;
-
-                    DEBUG_OUT << "ctx.sigma = ";
-                    for (int i = 0; i < 64; i++)
-                        fprintf(stderr, "%02x", ctx.sigma[i]);
-
-                    std::cerr << std::endl;
+                    DEBUG_OUT << "ctx.N = " << bytes_to_hex_string(ctx.N, 64) << std::endl;
+                    DEBUG_OUT << "ctx.h = " << bytes_to_hex_string(ctx.h, 64) << std::endl;
+                    DEBUG_OUT << "ctx.sigma = " << bytes_to_hex_string(ctx.sigma, 64) << std::endl;
 
                     sigma_nx_s_.write(bytes_to_sc_uint512(ctx.sigma, 64));
                     h_nx_s_.write(bytes_to_sc_uint512(ctx.h, 64));
