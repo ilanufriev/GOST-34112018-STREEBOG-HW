@@ -23,7 +23,7 @@ struct ControlLogic : public sc_core::sc_module
     static constexpr unsigned long long STAGE2_IDX   = 0;
     static constexpr unsigned long long STAGE3_IDX   = 1;
 
-    ControlLogic(sc_core::sc_module_name const& name);
+    ControlLogic(sc_core::sc_module_name const &name);
     
     void thread();
 
@@ -51,7 +51,6 @@ struct ControlLogic : public sc_core::sc_module
     out_export<u512> h_o;
     out_export<bool> st_ack_o;
     out_export<bool> st_start_o;
-    out_export<bool> st_sel_o;
 
 private:
     void advance_state(State next_state);

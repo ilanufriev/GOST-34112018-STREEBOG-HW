@@ -13,6 +13,8 @@ add_executable(gost34112018_test
     src/stage.cxx
     src/tb.cxx
     src/utils.cxx
+    src/gost34112018_hw.cxx
+    src/transformations.cxx
 )
 
 target_include_directories(gost34112018_test PRIVATE

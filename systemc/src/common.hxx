@@ -10,15 +10,16 @@
 namespace streebog_hw
 {
 
+constexpr int8_t BLOCK_SIZE = 64;
 /**
     @brief      Clock cycle duration in nanoseconds.
  */
-constexpr unsigned long long CLOCK_CYCLE_NS = 10;
+constexpr int64_t CLOCK_CYCLE_NS = 10;
 
 /**
     @brief      Default address for TLM-2.0 transactions.
  */
-constexpr unsigned long long DEFAULT_GPLD_ADDR = 0;
+constexpr int64_t DEFAULT_GPLD_ADDR = 0;
 
 /**
     @brief      S-box, as defined in the chapter 5.1 of The Standard. It is used for

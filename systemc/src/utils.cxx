@@ -42,7 +42,7 @@ std::string byte_to_hex_string(const unsigned char num, const std::string prefix
 {
     std::ostringstream os;
     os << prefix;
-    os << std::hex << std::setw(2) << (+num & 0xFF);
+    os << std::hex << std::setw(2) << std::setfill('0') << (+num & 0xFF);
     return os.str();
 }
 

@@ -1,5 +1,6 @@
 #include <control_logic.hxx>
 #include <iterator>
+#include <sysc/utils/sc_string.h>
 #include <utils.hxx>
 #include <common.hxx>
 #include <string>
@@ -41,20 +42,10 @@ ControlLogic::ControlLogic(sc_core::sc_module_name const &name)
     h_o.bind(h_s_);
     st_ack_o.bind(st_ack_s_);
     st_start_o.bind(st_start_s_);
-    st_sel_o.bind(st_sel_s_);
-
-    state_s_.write(ControlLogic::State::CLEAR);
-    hash_s_.write(0);
-    st_block_s_.write(0);
-    st_block_size_s_.write(0);
-    sigma_s_.write(0);
-    n_s_.write(0);
-    h_s_.write(0);
-    st_ack_s_.write(0);
-    st_start_s_.write(0);
-    st_sel_s_.write(0);
 
     SC_THREAD(thread);
+
+    state_s_.write(ControlLogic::State::CLEAR);
 }
 
 void ControlLogic::thread()
@@ -65,6 +56,16 @@ void ControlLogic::thread()
         {
             case State::CLEAR:
                 {
+                    hash_s_.write(0);
+                    st_block_s_.write(0);
+                    st_block_size_s_.write(0);
+                    sigma_s_.write(0);
+                    n_s_.write(0);
+                    h_s_.write(0);
+                    st_ack_s_.write(0);
+                    st_start_s_.write(0);
+                    st_sel_s_.write(0);
+
                     DEBUG_OUT << "State CLEAR" << std::endl;
                     WAIT_WHILE(start_i->read() == 0);
 

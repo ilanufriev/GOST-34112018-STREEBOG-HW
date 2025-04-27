@@ -1,3 +1,4 @@
+#include "gost34112018_hw.hxx"
 #include <boost/program_options.hpp>
 #include <boost/program_options/value_semantic.hpp>
 #include <common.hxx>
@@ -100,38 +101,16 @@ int sc_main(int argc, char **argv)
         return 1;
     }
 
-    streebog_hw::ControlLogic cl("cl");
-    streebog_hw::Stage st("st");
+    streebog_hw::Gost34112018_Hw gost("GOSTHW");
 
-    sc_core::sc_signal<bool> start;
-    sc_core::sc_signal<bool> reset;
-    sc_core::sc_signal<bool> hash_size;
-    sc_core::sc_signal<bool> ack;
-    sc_core::sc_signal<streebog_hw::u512> block;
-    sc_core::sc_signal<streebog_hw::u8>   block_size;
+    sc_core::sc_signal<bool> &start = gost.start_i;
+    sc_core::sc_signal<bool> &reset = gost.reset_i;
+    sc_core::sc_signal<bool> &hash_size = gost.hash_size_i;
+    sc_core::sc_signal<bool> &ack = gost.ack_i;
+    sc_core::sc_signal<streebog_hw::u512> &block = gost.block_i;
+    sc_core::sc_signal<streebog_hw::u8>   &block_size = gost.block_size_i;
 
-    cl.start_i(start);
-    cl.reset_i(reset);
-    cl.hash_size_i(hash_size);
-    cl.ack_i(ack);
-    cl.block_i(block);
-    cl.block_size_i(block_size);
-
-    st.block_i(cl.st_block_o);
-    st.block_size_i(cl.st_block_size_o);
-    st.sigma_i(cl.sigma_o);
-    st.n_i(cl.n_o);
-    st.h_i(cl.h_o);
-    st.ack_i(cl.st_ack_o);
-    st.start_i(cl.st_start_o);
-    st.sel_i(cl.st_sel_o);
-
-    cl.sigma_nx_i(st.sigma_nx_o);
-    cl.n_nx_i(st.n_nx_o);
-    cl.h_nx_i(st.h_nx_o);
-    cl.st_state_i(st.state_o);
-
-    auto hash_block = [&start, &ack, &block, &block_size, &hash_size, &cl]
+    auto hash_block = [&start, &ack, &block, &block_size, &hash_size, &gost]
     (const unsigned char *in_block, const uint8_t in_block_size, const bool in_hash_size) {
         block = streebog_hw::bytes_to_sc_uint512(in_block, in_block_size);
         block_size = in_block_size;
@@ -140,7 +119,7 @@ int sc_main(int argc, char **argv)
         start = 1;
 
         DEBUG_OUT << "Waiting for busy\n";
-        ADVANCE_WHILE(cl.state_o->read() != streebog_hw::ControlLogic::State::BUSY);
+        ADVANCE_WHILE(gost.read_state() != streebog_hw::Gost34112018_Hw::State::BUSY);
 
         DEBUG_OUT << "block = " << block.read().to_string(sc_dt::SC_HEX) << std::endl;
         DEBUG_OUT << "block_size = " << block_size.read() << std::endl;
@@ -148,8 +127,8 @@ int sc_main(int argc, char **argv)
 
         start = 0;
         DEBUG_OUT << "Waiting for ready or done\n";
-        ADVANCE_WHILE(cl.state_o->read() != streebog_hw::ControlLogic::State::READY &&
-                      cl.state_o->read() != streebog_hw::ControlLogic::State::DONE);
+        ADVANCE_WHILE(gost.read_state() != streebog_hw::Gost34112018_Hw::State::READY &&
+                      gost.read_state() != streebog_hw::Gost34112018_Hw::State::DONE);
     };
 
     sc_core::sc_start(0, sc_core::SC_NS);
@@ -214,8 +193,14 @@ int sc_main(int argc, char **argv)
 
     // Format the input: print them in the right order
     std::string hash_str;
-    std::array<unsigned char, BLOCK_SIZE> hash_bytes;
-    streebog_hw::sc_uint512_to_bytes(hash_bytes.data(), hash_bytes.size(), cl.hash_o->read());
+    std::array<unsigned char, BLOCK_SIZE> hash_bytes_full;
+    streebog_hw::sc_uint512_to_bytes(hash_bytes_full.data(), hash_bytes_full.size(), gost.read_hash());
+    
+    std::vector<unsigned char> hash_bytes_result(
+        hash_bytes_full.rbegin(),
+        hash_bytes_full.rbegin() + hash_size_int
+    );
+
     std::ostringstream hash_os;
     hash_os << std::hex << std::setw(2) << std::setfill('0');
 
@@ -223,16 +208,15 @@ int sc_main(int argc, char **argv)
     {
         for (int i = 0; i < (hash_size_int / 8); i++)
         {
-            hash_os << std::hex << std::setw(2) << std::setfill('0') << (static_cast<int>(hash_bytes[(hash_size_int / 8) - 1 - i]) & 0xFF);
+            hash_os << std::hex << std::setw(2) << (static_cast<int>(hash_bytes_result[i]) & 0xFF);
         }
         hash_str = hash_os.str();
     }
     else
     {
-        std::ostringstream os;
         for (int i = 0; i < (hash_size_int / 8); i++)
         {
-            hash_os << std::hex << std::setw(2) << (static_cast<int>(hash_bytes[i]) & 0xFF);
+            hash_os << std::hex << std::setw(2) << std::setfill('0') << (static_cast<int>(hash_bytes_result[(hash_size_int / 8) - 1 - i]) & 0xFF);
         }
         hash_str = hash_os.str();
     }
@@ -240,7 +224,7 @@ int sc_main(int argc, char **argv)
     std::cout << hash_str << std::endl;
     ack.write(1);
 
-    ADVANCE_WHILE(cl.state_o->read() != streebog_hw::ControlLogic::State::CLEAR);
+    ADVANCE_WHILE(gost.read_state() != streebog_hw::Gost34112018_Hw::State::CLEAR);
 
     return 0;
 }
