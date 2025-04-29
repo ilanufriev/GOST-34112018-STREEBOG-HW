@@ -1,14 +1,14 @@
-#include "gost34112018_hw.hxx"
+#include <gost34112018_hw.hxx>
+#include <common.hxx>
+#include <datatypes.hxx>
+#include <utils.hxx>
+#include <stage.hxx>
+
 #include <boost/program_options.hpp>
 #include <boost/program_options/value_semantic.hpp>
-#include <common.hxx>
-#include <control_logic.hxx>
-#include <datatypes.hxx>
 #include <ostream>
-#include <utils.hxx>
 #include <iomanip>
 #include <sstream>
-#include <stage.hxx>
 #include <iostream>
 
 constexpr int32_t BLOCK_SIZE = 64;

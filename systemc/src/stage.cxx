@@ -1,6 +1,5 @@
 #include <cstdio>
 #include <iterator>
-#include <sysc/utils/sc_string.h>
 #include <systemc>
 #include <iostream>
 #include <utils.hxx>

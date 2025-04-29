@@ -1,8 +1,8 @@
 // Copyright 2025, Anufriev Ilia, anufriewwi@rambler.ru
 // SPDX-License-Identifier: BSD-3-Clause-No-Military-License OR GPL-3.0-or-later
 
-#include "common.hxx"
-#include "datatypes.hxx"
+#include <common.hxx>
+#include <datatypes.hxx>
 
 namespace streebog_hw
 {

@@ -1,10 +1,6 @@
-#include "control_logic.hxx"
-#include "utils.hxx"
+#include <control_logic.hxx>
+#include <utils.hxx>
 #include <gost34112018_hw.hxx>
-#include <iterator>
-#include <memory>
-#include <sysc/kernel/sc_module.h>
-#include <sysc/kernel/sc_module_name.h>
 
 namespace streebog_hw
 {

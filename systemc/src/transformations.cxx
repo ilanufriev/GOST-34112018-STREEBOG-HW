@@ -1,8 +1,5 @@
 #include <array>
 #include <filesystem>
-#include <sysc/kernel/sc_module.h>
-#include <sysc/kernel/sc_module_name.h>
-#include <sysc/utils/sc_string.h>
 #include <utils.hxx>
 #include <common.hxx>
 #include <transformations.hxx>

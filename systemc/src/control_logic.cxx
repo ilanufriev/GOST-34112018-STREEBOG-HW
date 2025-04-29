@@ -1,13 +1,8 @@
 #include <control_logic.hxx>
-#include <iterator>
-#include <sysc/utils/sc_string.h>
 #include <utils.hxx>
 #include <common.hxx>
-#include <string>
 #include <systemc>
 #include <iostream>
-#include <tlm_core/tlm_2/tlm_generic_payload/tlm_gp.h>
-#include <tlm_utils/simple_initiator_socket.h>
 
 namespace streebog_hw
 {

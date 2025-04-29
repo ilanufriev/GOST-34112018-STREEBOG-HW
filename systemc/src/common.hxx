@@ -4,8 +4,8 @@
 #ifndef __COMMON_HXX__
 #define __COMMON_HXX__
 
-#include "datatypes.hxx"
-#include "utils.hxx"
+#include <datatypes.hxx>
+#include <utils.hxx>
 
 namespace streebog_hw
 {
