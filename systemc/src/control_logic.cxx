@@ -8,12 +8,11 @@ namespace streebog_hw
 {
 
 ControlLogic::ControlLogic(sc_core::sc_module_name const &name)
-    : AUTONAME(start_i)
+    : AUTONAME(trg_i)
     , AUTONAME(reset_i)
     , AUTONAME(block_i)
     , AUTONAME(block_size_i)
     , AUTONAME(hash_size_i)
-    , AUTONAME(ack_i)
     , AUTONAME(clk_i)
     , AUTONAME(state_o)
     , AUTONAME(hash_o)
@@ -26,8 +25,7 @@ ControlLogic::ControlLogic(sc_core::sc_module_name const &name)
     , AUTONAME(sigma_o)
     , AUTONAME(n_o)
     , AUTONAME(h_o)
-    , AUTONAME(st_ack_o)
-    , AUTONAME(st_start_o)
+    , AUTONAME(st_trg_o)
 {
     state_o.bind(state_s_);
     hash_o.bind(hash_s_);
@@ -36,8 +34,7 @@ ControlLogic::ControlLogic(sc_core::sc_module_name const &name)
     sigma_o.bind(sigma_s_);
     n_o.bind(n_s_);
     h_o.bind(h_s_);
-    st_ack_o.bind(st_ack_s_);
-    st_start_o.bind(st_start_s_);
+    st_trg_o.bind(st_trg_s_);
 
     SC_THREAD(thread);
 
@@ -53,8 +50,7 @@ void ControlLogic::trace(sc_core::sc_trace_file *tf)
     sc_core::sc_trace(tf, sigma_s_, "ControlLogic.sigma");
     sc_core::sc_trace(tf, n_s_, "ControlLogic.n");
     sc_core::sc_trace(tf, h_s_, "ControlLogic.h");
-    sc_core::sc_trace(tf, st_ack_s_, "ControlLogic.st_ack");
-    sc_core::sc_trace(tf, st_start_s_, "ControlLogic.st_start");
+    sc_core::sc_trace(tf, st_trg_s_, "ControlLogic.st_start");
     sc_core::sc_trace(tf, st_sel_s_, "ControlLogic.st_sel");
 }
 
@@ -72,12 +68,10 @@ void ControlLogic::thread()
                     sigma_s_.write(0);
                     n_s_.write(0);
                     h_s_.write(0);
-                    st_ack_s_.write(0);
-                    st_start_s_.write(0);
-                    st_sel_s_.write(0);
+                    st_trg_s_.write(0);
 
                     DEBUG_OUT << "State CLEAR" << std::endl;
-                    WAIT_WHILE_CLK(start_i->read() == 0, 
+                    WAIT_WHILE_CLK(trg_i->read() == 0, 
                                    clk_i->posedge_event());
 
                     hash_size_ = hash_size_i->read();
@@ -114,11 +108,11 @@ void ControlLogic::thread()
                     st_block_s_.write(block_);
                     st_block_size_s_.write(block_size_);
 
-                    st_start_s_.write(1);
+                    st_trg_s_.write(1);
 
                     sc_core::wait(clk_i->posedge_event());
 
-                    st_start_s_.write(0);
+                    st_trg_s_.write(0);
 
                     WAIT_WHILE_CLK(st_state_i->read() != Stage::State::DONE,
                                    clk_i->posedge_event());
@@ -131,11 +125,11 @@ void ControlLogic::thread()
                     DEBUG_OUT << "n_nx_i = " << n_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
                     DEBUG_OUT << "h_nx_i = " << h_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
 
-                    st_ack_s_.write(1);
+                    st_trg_s_.write(1);
 
                     sc_core::wait(clk_i->posedge_event());
 
-                    st_ack_s_.write(0);
+                    st_trg_s_.write(0); // This will reset Stage to CLEAR
 
                     if (next_state == State::DONE)
                     {
@@ -148,7 +142,7 @@ void ControlLogic::thread()
             case State::READY:
                 {
                     DEBUG_OUT << "State READY" << std::endl;
-                    WAIT_WHILE_CLK(start_i->read() == 0,
+                    WAIT_WHILE_CLK(trg_i->read() == 0,
                                    clk_i->posedge_event());
 
                     advance_state(State::BUSY);
@@ -157,7 +151,7 @@ void ControlLogic::thread()
             case State::DONE:
                 {
                     DEBUG_OUT << "State DONE" << std::endl;
-                    WAIT_WHILE_CLK(ack_i->read() == 0,
+                    WAIT_WHILE_CLK(trg_i->read() == 0,
                                    clk_i->posedge_event());
 
                     advance_state(State::CLEAR);

@@ -60,8 +60,7 @@ struct Gn : public sc_core::sc_module
     in_port<u512> m_i;
     in_port<u512> n_i;
     in_port<u512> h_i;
-    in_port<bool> start_i;
-    in_port<bool> ack_i;
+    in_port<bool> trg_i;
     in_port<bool> clk_i;
 
     out_export<u512> result_o;

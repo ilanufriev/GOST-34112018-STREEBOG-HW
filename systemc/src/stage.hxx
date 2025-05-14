@@ -23,15 +23,14 @@ struct Stage : public sc_core::sc_module
 
     void thread();
     
-    in_port<bool> start_i;
+    in_port<bool> trg_i;
     in_port<u512> block_i;
     in_port<u8>   block_size_i;
     in_port<u512> sigma_i;
     in_port<u512> n_i;
     in_port<u512> h_i;
-    in_port<bool> ack_i;
     in_port<bool> clk_i;
-    
+
     out_export<u512>  sigma_nx_o;
     out_export<u512>  n_nx_o;
     out_export<u512>  h_nx_o;
@@ -42,8 +41,7 @@ struct Stage : public sc_core::sc_module
     out_export<u512> g_n_m_o;
     out_export<u512> g_n_n_o;
     out_export<u512> g_n_h_o;
-    out_export<bool> g_n_start_o;
-    out_export<bool> g_n_ack_o;
+    out_export<bool> g_n_trg_o;
 
     void trace(sc_core::sc_trace_file *tf);
 private:
@@ -64,8 +62,7 @@ private:
     sc_core::sc_signal<u512> g_n_m_s_;
     sc_core::sc_signal<u512> g_n_n_s_;
     sc_core::sc_signal<u512> g_n_h_s_;
-    sc_core::sc_signal<bool> g_n_start_s_;
-    sc_core::sc_signal<bool> g_n_ack_s_;
+    sc_core::sc_signal<bool> g_n_trg_s_;
 };
 
 }

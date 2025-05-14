@@ -13,9 +13,8 @@ Gost34112018_Hw::Gost34112018_Hw(sc_core::sc_module_name const &name)
     sl_ = std::make_unique<SLTransform>("SL");
     p_  = std::make_unique<PTransform>("P");
 
-    cl_->start_i.bind(start_i);
+    cl_->trg_i.bind(trg_i);
     cl_->reset_i.bind(reset_i);
-    cl_->ack_i.bind(ack_i);
     cl_->block_i.bind(block_i);
     cl_->block_size_i.bind(block_size_i);
     cl_->hash_size_i.bind(hash_size_i);
@@ -30,8 +29,7 @@ Gost34112018_Hw::Gost34112018_Hw(sc_core::sc_module_name const &name)
     cl_->st_state_i.bind(st_->state_o);
 
     st_->clk_i.bind(clk_i);
-    st_->ack_i.bind(cl_->st_ack_o);
-    st_->start_i.bind(cl_->st_start_o);
+    st_->trg_i.bind(cl_->st_trg_o);
     st_->block_i.bind(cl_->st_block_o);
     st_->block_size_i.bind(cl_->st_block_size_o);
     st_->sigma_i.bind(cl_->sigma_o);
@@ -44,8 +42,7 @@ Gost34112018_Hw::Gost34112018_Hw(sc_core::sc_module_name const &name)
     gn_->m_i.bind(st_->g_n_m_o);
     gn_->n_i.bind(st_->g_n_n_o);
     gn_->h_i.bind(st_->g_n_h_o);
-    gn_->start_i.bind(st_->g_n_start_o);
-    gn_->ack_i.bind(st_->g_n_ack_o);
+    gn_->trg_i.bind(st_->g_n_trg_o);
     gn_->clk_i.bind(clk_i);
 
     gn_->sl_tr_result_i.bind(sl_->result_o);
@@ -64,9 +61,8 @@ void Gost34112018_Hw::thread()
 void Gost34112018_Hw::trace(sc_core::sc_trace_file *tf)
 {
     sc_core::sc_trace(tf, clk_i, "Gost34112018_Hw.clk");
-    sc_core::sc_trace(tf, start_i, "Gost34112018_Hw.start");
+    sc_core::sc_trace(tf, trg_i, "Gost34112018_Hw.trg");
     sc_core::sc_trace(tf, reset_i, "Gost34112018_Hw.reset");
-    sc_core::sc_trace(tf, ack_i, "Gost34112018_Hw.ack");
     sc_core::sc_trace(tf, block_i, "Gost34112018_Hw.block");
     sc_core::sc_trace(tf, block_size_i, "Gost34112018_Hw.block_size");
     sc_core::sc_trace(tf, hash_size_i, "Gost34112018_Hw.hash_size");

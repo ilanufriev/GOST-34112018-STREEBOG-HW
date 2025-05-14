@@ -29,12 +29,11 @@ struct ControlLogic : public sc_core::sc_module
     void thread();
 
     // Initiator side of I/O
-    in_port<bool> start_i;
+    in_port<bool> trg_i;
     in_port<bool> reset_i;
     in_port<u512> block_i;
     in_port<u8>   block_size_i;
     in_port<bool> hash_size_i;
-    in_port<bool> ack_i;
     in_port<bool> clk_i;
 
     out_export<ScState> state_o;
@@ -51,8 +50,7 @@ struct ControlLogic : public sc_core::sc_module
     out_export<u512> sigma_o;
     out_export<u512> n_o;
     out_export<u512> h_o;
-    out_export<bool> st_ack_o;
-    out_export<bool> st_start_o;
+    out_export<bool> st_trg_o;
 
     void trace(sc_core::sc_trace_file *tf);
 
@@ -75,8 +73,7 @@ private:
     sc_core::sc_signal<u512>  sigma_s_;
     sc_core::sc_signal<u512>  n_s_;
     sc_core::sc_signal<u512>  h_s_;
-    sc_core::sc_signal<bool>  st_ack_s_;
-    sc_core::sc_signal<bool>  st_start_s_;
+    sc_core::sc_signal<bool>  st_trg_s_;
     sc_core::sc_signal<bool>  st_sel_s_;
 };
 

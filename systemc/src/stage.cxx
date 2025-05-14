@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <iterator>
 #include <systemc>
 #include <iostream>
 #include <utils.hxx>
@@ -14,13 +13,12 @@ namespace streebog_hw
 {
 
 Stage::Stage(sc_core::sc_module_name const &name)
-    : AUTONAME(start_i)
+    : AUTONAME(trg_i)
     , AUTONAME(block_i)
     , AUTONAME(block_size_i)
     , AUTONAME(sigma_i)
     , AUTONAME(n_i)
     , AUTONAME(h_i)
-    , AUTONAME(ack_i)
     , AUTONAME(clk_i)
     , AUTONAME(sigma_nx_o)
     , AUTONAME(n_nx_o)
@@ -31,8 +29,7 @@ Stage::Stage(sc_core::sc_module_name const &name)
     , AUTONAME(g_n_m_o)
     , AUTONAME(g_n_n_o)
     , AUTONAME(g_n_h_o)
-    , AUTONAME(g_n_start_o)
-    , AUTONAME(g_n_ack_o)
+    , AUTONAME(g_n_trg_o)
 {
     sigma_nx_o.bind(sigma_nx_s_);
     n_nx_o.bind(n_nx_s_);
@@ -42,8 +39,7 @@ Stage::Stage(sc_core::sc_module_name const &name)
     g_n_m_o.bind(g_n_m_s_);
     g_n_n_o.bind(g_n_n_s_);
     g_n_h_o.bind(g_n_h_s_);
-    g_n_start_o.bind(g_n_start_s_);
-    g_n_ack_o.bind(g_n_ack_s_);
+    g_n_trg_o.bind(g_n_trg_s_);
 
     SC_THREAD(thread);
 
@@ -59,8 +55,7 @@ void Stage::trace(sc_core::sc_trace_file *tf)
     sc_core::sc_trace(tf, g_n_m_s_, "Stage.g_n_m");
     sc_core::sc_trace(tf, g_n_n_s_, "Stage.g_n_n");
     sc_core::sc_trace(tf, g_n_h_s_, "Stage.g_n_h");
-    sc_core::sc_trace(tf, g_n_start_s_, "Stage.g_n_start");
-    sc_core::sc_trace(tf, g_n_ack_s_, "Stage.g_n_ack");
+    sc_core::sc_trace(tf, g_n_trg_s_, "Stage.g_n_start");
 }
 
 void Stage::thread()
@@ -72,7 +67,7 @@ void Stage::thread()
             case State::CLEAR:
                 {
                     DEBUG_OUT << "Stage is now at CLEAR\n";
-                    
+ 
                     h_ = n_ = sigma_ = 0;
 
                     h_nx_s_.write(0);
@@ -82,10 +77,9 @@ void Stage::thread()
                     g_n_m_s_.write(0);
                     g_n_n_s_.write(0);
                     g_n_h_s_.write(0);
-                    g_n_start_s_.write(0);
-                    g_n_ack_s_.write(0);
+                    g_n_trg_s_.write(0);
 
-                    WAIT_WHILE_CLK(start_i->read() == 0,
+                    WAIT_WHILE_CLK(trg_i->read() == 0,
                                    clk_i->posedge_event());
 
                     advance_state(State::BUSY);
@@ -109,7 +103,7 @@ void Stage::thread()
             case State::DONE:
                 {
                     DEBUG_OUT << "Stage is now at DONE\n";
-                    WAIT_WHILE_CLK(ack_i->read() != 0,
+                    WAIT_WHILE_CLK(trg_i->read() == 0,
                                    clk_i->posedge_event());
 
                     advance_state(State::CLEAR);
@@ -126,22 +120,22 @@ u512 Stage::compute_gn(const u512 &h, const u512 &m, const u512&n)
     g_n_h_s_.write(h);
     g_n_m_s_.write(m);
 
-    g_n_start_s_.write(1);
+    g_n_trg_s_.write(1);
 
     sc_core::wait(clk_i->posedge_event());
 
-    g_n_start_s_.write(0);
+    g_n_trg_s_.write(0);
 
     WAIT_WHILE_CLK(g_n_state_i->read() != Gn::State::DONE,
                    clk_i->posedge_event());
 
     u512 result = g_n_result_i->read();
 
-    g_n_ack_s_.write(1);
+    g_n_trg_s_.write(1);
 
     sc_core::wait(clk_i->posedge_event());
- 
-    g_n_ack_s_.write(0);
+
+    g_n_trg_s_.write(0); // This will reset Gn to CLEAR
 
     return result;
 }

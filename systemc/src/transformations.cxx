@@ -100,8 +100,7 @@ Gn::Gn(sc_core::sc_module_name const &name)
     : AUTONAME(m_i)
     , AUTONAME(n_i)
     , AUTONAME(h_i)
-    , AUTONAME(start_i)
-    , AUTONAME(ack_i)
+    , AUTONAME(trg_i)
     , AUTONAME(clk_i)
     , AUTONAME(result_o)
     , AUTONAME(state_o)
@@ -132,7 +131,7 @@ void Gn::thread()
                     sl_tr_a_s_.write(0);
                     p_tr_a_s_.write(0);
 
-                    WAIT_WHILE_CLK(start_i->read() == 0,
+                    WAIT_WHILE_CLK(trg_i->read() == 0,
                                    clk_i->posedge_event());
 
                     advance_state(State::BUSY);
@@ -146,7 +145,7 @@ void Gn::thread()
                 }
             case State::DONE:
                 {
-                    WAIT_WHILE_CLK(ack_i->read() == 0,
+                    WAIT_WHILE_CLK(trg_i->read() == 0,
                                    clk_i->posedge_event());
 
                     advance_state(State::CLEAR);
