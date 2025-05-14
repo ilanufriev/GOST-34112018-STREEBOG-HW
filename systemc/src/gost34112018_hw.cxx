@@ -19,6 +19,7 @@ Gost34112018_Hw::Gost34112018_Hw(sc_core::sc_module_name const &name)
     cl_->block_i.bind(block_i);
     cl_->block_size_i.bind(block_size_i);
     cl_->hash_size_i.bind(hash_size_i);
+    cl_->clk_i.bind(clk_i);
 
     hash_o = &cl_->hash_o;
     state_o = &cl_->state_o;
@@ -28,6 +29,7 @@ Gost34112018_Hw::Gost34112018_Hw(sc_core::sc_module_name const &name)
     cl_->h_nx_i.bind(st_->h_nx_o);
     cl_->st_state_i.bind(st_->state_o);
 
+    st_->clk_i.bind(clk_i);
     st_->ack_i.bind(cl_->st_ack_o);
     st_->start_i.bind(cl_->st_start_o);
     st_->block_i.bind(cl_->st_block_o);
@@ -38,12 +40,13 @@ Gost34112018_Hw::Gost34112018_Hw(sc_core::sc_module_name const &name)
 
     st_->g_n_result_i.bind(gn_->result_o);
     st_->g_n_state_i.bind(gn_->state_o);
-
+    
     gn_->m_i.bind(st_->g_n_m_o);
     gn_->n_i.bind(st_->g_n_n_o);
     gn_->h_i.bind(st_->g_n_h_o);
     gn_->start_i.bind(st_->g_n_start_o);
     gn_->ack_i.bind(st_->g_n_ack_o);
+    gn_->clk_i.bind(clk_i);
 
     gn_->sl_tr_result_i.bind(sl_->result_o);
     gn_->p_tr_result_i.bind(p_->result_o);
@@ -58,6 +61,23 @@ void Gost34112018_Hw::thread()
 {
 }
 
+void Gost34112018_Hw::trace(sc_core::sc_trace_file *tf)
+{
+    sc_core::sc_trace(tf, clk_i, "Gost34112018_Hw.clk");
+    sc_core::sc_trace(tf, start_i, "Gost34112018_Hw.start");
+    sc_core::sc_trace(tf, reset_i, "Gost34112018_Hw.reset");
+    sc_core::sc_trace(tf, ack_i, "Gost34112018_Hw.ack");
+    sc_core::sc_trace(tf, block_i, "Gost34112018_Hw.block");
+    sc_core::sc_trace(tf, block_size_i, "Gost34112018_Hw.block_size");
+    sc_core::sc_trace(tf, hash_size_i, "Gost34112018_Hw.hash_size");
+
+    cl_->trace(tf);
+    st_->trace(tf);
+    gn_->trace(tf);
+    sl_->trace(tf);
+    p_->trace(tf);
+}
+
 u512 Gost34112018_Hw::read_hash() const
 {
     return (*hash_o)->read();
@@ -65,7 +85,7 @@ u512 Gost34112018_Hw::read_hash() const
 
 Gost34112018_Hw::State Gost34112018_Hw::read_state() const
 {
-    return static_cast<State>((*state_o)->read());
+    return static_cast<State>((*state_o)->read().to_int());
 }
 
 }

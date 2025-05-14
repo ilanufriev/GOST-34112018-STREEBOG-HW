@@ -12,10 +12,14 @@
 #define WAIT_WHILE(__condition) \
     while(__condition) { streebog_hw::wait_clk(1); }
 
+#define WAIT_WHILE_CLK(__condition, __clk_expr) \
+    while(__condition) { sc_core::wait(__clk_expr); }
+
+#define __ENABLE_WAVEFORM_TRACING__
+
 #define __ENABLE_DEBUG_MESSAGES__
 #ifdef __ENABLE_DEBUG_MESSAGES__
-
-#define DEBUG_OUT_ENABLED 1
+    #define DEBUG_OUT_ENABLED 1
     #define DEBUG_OUT \
         if (DEBUG_OUT_ENABLED) std::cerr << "[DEBUG] from " << __PRETTY_FUNCTION__ << ", line " << __LINE__ << ": "
 #else

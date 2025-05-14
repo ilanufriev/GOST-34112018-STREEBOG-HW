@@ -10,7 +10,8 @@ namespace streebog_hw
 
 struct ControlLogic : public sc_core::sc_module
 {
-    
+    using ScState = sc_dt::sc_uint<32>;
+        
     enum State
     {
         CLEAR,
@@ -34,15 +35,16 @@ struct ControlLogic : public sc_core::sc_module
     in_port<u8>   block_size_i;
     in_port<bool> hash_size_i;
     in_port<bool> ack_i;
-    
-    out_export<State> state_o;
+    in_port<bool> clk_i;
+
+    out_export<ScState> state_o;
     out_export<u512>  hash_o;
 
     // Stage block side of I/O
     in_port<u512>         sigma_nx_i;
     in_port<u512>         n_nx_i;
     in_port<u512>         h_nx_i;
-    in_port<Stage::State> st_state_i;
+    in_port<Stage::ScState> st_state_i;
 
     out_export<u512> st_block_o;
     out_export<u8>   st_block_size_o;
@@ -51,6 +53,8 @@ struct ControlLogic : public sc_core::sc_module
     out_export<u512> h_o;
     out_export<bool> st_ack_o;
     out_export<bool> st_start_o;
+
+    void trace(sc_core::sc_trace_file *tf);
 
 private:
     void advance_state(State next_state);
@@ -63,7 +67,7 @@ private:
     u512 h_;
     u512 n_;
 
-    sc_core::sc_signal<State> state_s_;
+    sc_core::sc_signal<ScState> state_s_;
     sc_core::sc_signal<u512>  hash_s_;
 
     sc_core::sc_signal<u512>  st_block_s_;

@@ -14,13 +14,14 @@ namespace streebog_hw
 {
 
 Stage::Stage(sc_core::sc_module_name const &name)
-    : AUTONAME(block_i)
+    : AUTONAME(start_i)
+    , AUTONAME(block_i)
     , AUTONAME(block_size_i)
     , AUTONAME(sigma_i)
     , AUTONAME(n_i)
     , AUTONAME(h_i)
     , AUTONAME(ack_i)
-    , AUTONAME(start_i)
+    , AUTONAME(clk_i)
     , AUTONAME(sigma_nx_o)
     , AUTONAME(n_nx_o)
     , AUTONAME(h_nx_o)
@@ -49,11 +50,24 @@ Stage::Stage(sc_core::sc_module_name const &name)
     state_s_.write(State::CLEAR);
 }
 
+void Stage::trace(sc_core::sc_trace_file *tf)
+{
+    sc_core::sc_trace(tf, sigma_nx_s_, "Stage.sigma_nx");
+    sc_core::sc_trace(tf, n_nx_s_, "Stage.n_nx");
+    sc_core::sc_trace(tf, h_nx_s_, "Stage.h_nx");
+    sc_core::sc_trace(tf, state_s_, "Stage.state");
+    sc_core::sc_trace(tf, g_n_m_s_, "Stage.g_n_m");
+    sc_core::sc_trace(tf, g_n_n_s_, "Stage.g_n_n");
+    sc_core::sc_trace(tf, g_n_h_s_, "Stage.g_n_h");
+    sc_core::sc_trace(tf, g_n_start_s_, "Stage.g_n_start");
+    sc_core::sc_trace(tf, g_n_ack_s_, "Stage.g_n_ack");
+}
+
 void Stage::thread()
 {
     while (true)
     {
-        switch (state_s_.read())
+        switch (static_cast<State>(state_s_.read().to_int()))
         {
             case State::CLEAR:
                 {
@@ -71,7 +85,8 @@ void Stage::thread()
                     g_n_start_s_.write(0);
                     g_n_ack_s_.write(0);
 
-                    WAIT_WHILE(start_i->read() == 0);
+                    WAIT_WHILE_CLK(start_i->read() == 0,
+                                   clk_i->posedge_event());
 
                     advance_state(State::BUSY);
                     break;
@@ -94,12 +109,14 @@ void Stage::thread()
             case State::DONE:
                 {
                     DEBUG_OUT << "Stage is now at DONE\n";
-                    WAIT_WHILE(ack_i->read() != 0);
+                    WAIT_WHILE_CLK(ack_i->read() != 0,
+                                   clk_i->posedge_event());
 
                     advance_state(State::CLEAR);
                     break;
                 }
         }
+        sc_core::wait(clk_i->posedge_event());
     }
 }
 
@@ -111,18 +128,19 @@ u512 Stage::compute_gn(const u512 &h, const u512 &m, const u512&n)
 
     g_n_start_s_.write(1);
 
-    WAIT_WHILE(g_n_state_i->read() != Gn::State::BUSY);
+    sc_core::wait(clk_i->posedge_event());
 
     g_n_start_s_.write(0);
 
-    WAIT_WHILE(g_n_state_i->read() != Gn::State::DONE);
+    WAIT_WHILE_CLK(g_n_state_i->read() != Gn::State::DONE,
+                   clk_i->posedge_event());
 
     u512 result = g_n_result_i->read();
 
     g_n_ack_s_.write(1);
 
-    WAIT_WHILE(g_n_state_i->read() != Gn::State::CLEAR);
-    
+    sc_core::wait(clk_i->posedge_event());
+ 
     g_n_ack_s_.write(0);
 
     return result;
@@ -171,7 +189,6 @@ void Stage::stage3()
 void Stage::advance_state(State next_state)
 {
     state_s_.write(next_state);
-    WAIT_WHILE(state_s_.read() != next_state);
 }
 
 };

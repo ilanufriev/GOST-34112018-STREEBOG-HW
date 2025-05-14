@@ -14,6 +14,7 @@ ControlLogic::ControlLogic(sc_core::sc_module_name const &name)
     , AUTONAME(block_size_i)
     , AUTONAME(hash_size_i)
     , AUTONAME(ack_i)
+    , AUTONAME(clk_i)
     , AUTONAME(state_o)
     , AUTONAME(hash_o)
     , AUTONAME(sigma_nx_i)
@@ -43,11 +44,25 @@ ControlLogic::ControlLogic(sc_core::sc_module_name const &name)
     state_s_.write(ControlLogic::State::CLEAR);
 }
 
+void ControlLogic::trace(sc_core::sc_trace_file *tf)
+{
+    sc_core::sc_trace(tf, state_s_, "ControlLogic.state");
+    sc_core::sc_trace(tf, hash_s_, "ControlLogic.hash");
+    sc_core::sc_trace(tf, st_block_s_, "ControlLogic.st_block");
+    sc_core::sc_trace(tf, st_block_size_s_, "ControlLogic.st_block_size");
+    sc_core::sc_trace(tf, sigma_s_, "ControlLogic.sigma");
+    sc_core::sc_trace(tf, n_s_, "ControlLogic.n");
+    sc_core::sc_trace(tf, h_s_, "ControlLogic.h");
+    sc_core::sc_trace(tf, st_ack_s_, "ControlLogic.st_ack");
+    sc_core::sc_trace(tf, st_start_s_, "ControlLogic.st_start");
+    sc_core::sc_trace(tf, st_sel_s_, "ControlLogic.st_sel");
+}
+
 void ControlLogic::thread()
 {
     while (true)
     {
-        switch (state_s_.read())
+        switch (static_cast<ControlLogic::State>(state_s_.read().to_int()))
         {
             case State::CLEAR:
                 {
@@ -62,7 +77,8 @@ void ControlLogic::thread()
                     st_sel_s_.write(0);
 
                     DEBUG_OUT << "State CLEAR" << std::endl;
-                    WAIT_WHILE(start_i->read() == 0);
+                    WAIT_WHILE_CLK(start_i->read() == 0, 
+                                   clk_i->posedge_event());
 
                     hash_size_ = hash_size_i->read();
 
@@ -84,12 +100,10 @@ void ControlLogic::thread()
 
                     if (block_size_ == 64)
                     {
-                        st_sel_s_.write(0);
                         next_state = State::READY;
                     }
                     else
                     {
-                        st_sel_s_.write(1);
                         next_state = State::DONE;
                     }
 
@@ -102,11 +116,12 @@ void ControlLogic::thread()
 
                     st_start_s_.write(1);
 
-                    WAIT_WHILE(st_state_i->read() != Stage::State::BUSY);
+                    sc_core::wait(clk_i->posedge_event());
 
                     st_start_s_.write(0);
 
-                    WAIT_WHILE(st_state_i->read() != Stage::State::DONE);
+                    WAIT_WHILE_CLK(st_state_i->read() != Stage::State::DONE,
+                                   clk_i->posedge_event());
 
                     sigma_ = sigma_nx_i->read();
                     n_     = n_nx_i->read();
@@ -118,7 +133,7 @@ void ControlLogic::thread()
 
                     st_ack_s_.write(1);
 
-                    WAIT_WHILE(st_state_i->read() != Stage::State::CLEAR);
+                    sc_core::wait(clk_i->posedge_event());
 
                     st_ack_s_.write(0);
 
@@ -133,7 +148,8 @@ void ControlLogic::thread()
             case State::READY:
                 {
                     DEBUG_OUT << "State READY" << std::endl;
-                    WAIT_WHILE(start_i->read() == 0);
+                    WAIT_WHILE_CLK(start_i->read() == 0,
+                                   clk_i->posedge_event());
 
                     advance_state(State::BUSY);
                     break;
@@ -141,19 +157,21 @@ void ControlLogic::thread()
             case State::DONE:
                 {
                     DEBUG_OUT << "State DONE" << std::endl;
-                    WAIT_WHILE(ack_i->read() == 0);
+                    WAIT_WHILE_CLK(ack_i->read() == 0,
+                                   clk_i->posedge_event());
 
                     advance_state(State::CLEAR);
                     break;
                 }
         }
+
+        sc_core::wait(clk_i->posedge_event());
     }
 }
 
 void ControlLogic::advance_state(State next_state)
 {
     state_s_.write(next_state);
-    WAIT_WHILE(state_s_.read() != next_state);
 }
 
 };

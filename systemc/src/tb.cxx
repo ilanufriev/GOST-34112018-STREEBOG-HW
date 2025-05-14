@@ -11,7 +11,7 @@
 #include <sstream>
 #include <iostream>
 
-constexpr int32_t BLOCK_SIZE = 64;
+using streebog_hw::BLOCK_SIZE;
 
 template <typename T, std::size_t N>
 std::ostream& operator<<(std::ostream& os, const std::array<T, N>& arr) {
@@ -43,7 +43,22 @@ std::string array_to_hex_string(const std::array<unsigned char, N> &arr, const s
 
 namespace po = boost::program_options;
 
+int64_t g_clock_counter = 0;
+
+void wait_clk(int cycles, sc_core::sc_signal<bool> &clk)
+{
+    for (int i = 0; i < cycles; ++i)
+    {
+        clk = false;
+        sc_core::sc_start(static_cast<int>(streebog_hw::CLOCK_CYCLE_NS / 2), sc_core::SC_NS);
+        clk = true;
+        sc_core::sc_start(static_cast<int>(streebog_hw::CLOCK_CYCLE_NS / 2), sc_core::SC_NS);
+        g_clock_counter += 1;
+    }
+}
+
 #define ADVANCE_WHILE(__condition) while (__condition) sc_core::sc_start(10, sc_core::SC_NS)
+#define ADVANCE_WHILE_CLK(__condition, __clk) while (__condition) wait_clk(1, __clk)
 
 int sc_main(int argc, char **argv)
 {
@@ -107,10 +122,18 @@ int sc_main(int argc, char **argv)
     sc_core::sc_signal<bool> &reset = gost.reset_i;
     sc_core::sc_signal<bool> &hash_size = gost.hash_size_i;
     sc_core::sc_signal<bool> &ack = gost.ack_i;
+    sc_core::sc_signal<bool> &clk = gost.clk_i;
     sc_core::sc_signal<streebog_hw::u512> &block = gost.block_i;
     sc_core::sc_signal<streebog_hw::u8>   &block_size = gost.block_size_i;
 
-    auto hash_block = [&start, &ack, &block, &block_size, &hash_size, &gost]
+#ifdef __ENABLE_WAVEFORM_TRACING__
+    sc_core::sc_trace_file *tf = sc_core::sc_create_vcd_trace_file("Gost34112018_Hw_trace.vcd");
+    tf->set_time_unit(1, sc_core::SC_NS);
+
+    gost.trace(tf);
+#endif
+
+    auto hash_block = [&start, &ack, &clk, &block, &block_size, &hash_size, &gost]
     (const unsigned char *in_block, const uint8_t in_block_size, const bool in_hash_size) {
         block = streebog_hw::bytes_to_sc_uint512(in_block, in_block_size);
         block_size = in_block_size;
@@ -119,7 +142,8 @@ int sc_main(int argc, char **argv)
         start = 1;
 
         DEBUG_OUT << "Waiting for busy\n";
-        ADVANCE_WHILE(gost.read_state() != streebog_hw::Gost34112018_Hw::State::BUSY);
+        ADVANCE_WHILE_CLK(gost.read_state() != streebog_hw::Gost34112018_Hw::State::BUSY,
+                          clk);
 
         DEBUG_OUT << "block = " << block.read().to_string(sc_dt::SC_HEX) << std::endl;
         DEBUG_OUT << "block_size = " << block_size.read() << std::endl;
@@ -127,8 +151,9 @@ int sc_main(int argc, char **argv)
 
         start = 0;
         DEBUG_OUT << "Waiting for ready or done\n";
-        ADVANCE_WHILE(gost.read_state() != streebog_hw::Gost34112018_Hw::State::READY &&
-                      gost.read_state() != streebog_hw::Gost34112018_Hw::State::DONE);
+        ADVANCE_WHILE_CLK(gost.read_state() != streebog_hw::Gost34112018_Hw::State::READY &&
+                          gost.read_state() != streebog_hw::Gost34112018_Hw::State::DONE,
+                          clk);
     };
 
     sc_core::sc_start(0, sc_core::SC_NS);
@@ -221,10 +246,17 @@ int sc_main(int argc, char **argv)
         hash_str = hash_os.str();
     }
 
+    DEBUG_OUT << g_clock_counter << " clocks passed\n";
+
     std::cout << hash_str << std::endl;
     ack.write(1);
 
-    ADVANCE_WHILE(gost.read_state() != streebog_hw::Gost34112018_Hw::State::CLEAR);
+    ADVANCE_WHILE_CLK(gost.read_state() != streebog_hw::Gost34112018_Hw::State::CLEAR,
+                      clk);
+
+#ifdef __ENABLE_WAVEFORM_TRACING__
+    sc_core::sc_close_vcd_trace_file(tf);
+#endif
 
     return 0;
 }
