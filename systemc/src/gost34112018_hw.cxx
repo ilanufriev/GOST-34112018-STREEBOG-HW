@@ -89,6 +89,7 @@ void Gost34112018_Hw::thread()
 
 void Gost34112018_Hw::trace(sc_core::sc_trace_file *tf)
 {
+    sc_core::sc_trace(tf, clk_i, clk_i.name());
     sc_core::sc_trace(tf, trg_i, trg_i.name());
     sc_core::sc_trace(tf, reset_i, reset_i.name());
     sc_core::sc_trace(tf, block_i, block_i.name());

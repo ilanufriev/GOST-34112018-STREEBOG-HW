@@ -138,6 +138,7 @@ void Gn::trace(sc_core::sc_trace_file *tf)
     sc_core::sc_trace(tf, state_o, state_o.name());
     sc_core::sc_trace(tf, sl_tr_a_o, sl_tr_a_o.name());
     sc_core::sc_trace(tf, p_tr_a_o, p_tr_a_o.name());
+    sc_core::sc_trace(tf, clk_i, clk_i.name());
 }
 
 void Gn::advance_state(State next_state)

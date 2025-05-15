@@ -27,6 +27,7 @@ void Stage::trace(sc_core::sc_trace_file *tf)
     sc_core::sc_trace(tf, g_n_n_o, g_n_n_o.name());
     sc_core::sc_trace(tf, g_n_h_o, g_n_h_o.name());
     sc_core::sc_trace(tf, g_n_trg_o, g_n_trg_o.name());
+    sc_core::sc_trace(tf, clk_i, clk_i.name());
 }
 
 void Stage::thread()

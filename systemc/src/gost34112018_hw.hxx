@@ -54,18 +54,6 @@ private:
     std::unique_ptr<PTransform>   p_;
 
     // Connector signals
-    
-    // ControlLogic to outside I/O
-    sc_core::sc_signal<bool> cl_trg_;
-    sc_core::sc_signal<bool> cl_reset_;
-    sc_core::sc_signal<u512> cl_block_;
-    sc_core::sc_signal<u8>   cl_block_size_;
-    sc_core::sc_signal<bool> cl_hash_size_;
-    sc_core::sc_signal<bool> clk_;
-
-    sc_core::sc_signal<ControlLogic::ScState>  cl_state_;
-    sc_core::sc_signal<sc_dt::sc_biguint<512>> cl_hash_;
-
     // ControlLogic to Stage I/O
     sc_core::sc_signal<u512> cl_st_sigma_nx_;
     sc_core::sc_signal<u512> cl_st_n_nx_;

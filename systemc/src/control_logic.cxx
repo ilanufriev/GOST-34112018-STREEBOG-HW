@@ -22,6 +22,7 @@ void ControlLogic::trace(sc_core::sc_trace_file *tf)
     sc_core::sc_trace(tf, n_o, n_o.name());
     sc_core::sc_trace(tf, h_o, h_o.name());
     sc_core::sc_trace(tf, st_trg_o, st_trg_o.name());
+    sc_core::sc_trace(tf, clk_i, clk_i.name());
 }
 
 void ControlLogic::thread()
