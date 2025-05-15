@@ -31,10 +31,7 @@ u512 uint64_ts_to_sc_uint512(uint64_t *array, int64_t size)
 }
 
 PTransform::PTransform(sc_core::sc_module_name const &name)
-    : AUTONAME(a_i)
-    , AUTONAME(result_o)
 {
-    result_o.bind(result_s_);
     SC_METHOD(method);
     sensitive << a_i;
 }
@@ -52,19 +49,16 @@ void PTransform::method()
         result_bytes[i] = a_bytes[TAU[i]];
     }
     
-    result_s_.write(bytes_to_sc_uint512(result_bytes.data(), result_bytes.size()));
+    result_o.write(bytes_to_sc_uint512(result_bytes.data(), result_bytes.size()));
 }
 
 void PTransform::trace(sc_core::sc_trace_file *tf)
 {
-    sc_core::sc_trace(tf, result_s_, "PTransform.result");
+    sc_core::sc_trace(tf, result_o, result_o.name());
 }
 
 SLTransform::SLTransform(sc_core::sc_module_name const &name)
-    : AUTONAME(a_i)
-    , AUTONAME(result_o)
 {
-    result_o.bind(result_s_);
     SC_METHOD(method);
     sensitive << a_i;
 }
@@ -88,48 +82,30 @@ void SLTransform::method()
         result_qw[i] = c;
     }
 
-    result_s_.write(uint64_ts_to_sc_uint512(result_qw.data(), result_qw.size()));
+    result_o.write(uint64_ts_to_sc_uint512(result_qw.data(), result_qw.size()));
 }
 
 void SLTransform::trace(sc_core::sc_trace_file *tf)
 {
-    sc_core::sc_trace(tf, result_s_, "SLTransform.result");
+    sc_core::sc_trace(tf, result_o, result_o.name());
 }
 
 Gn::Gn(sc_core::sc_module_name const &name)
-    : AUTONAME(m_i)
-    , AUTONAME(n_i)
-    , AUTONAME(h_i)
-    , AUTONAME(trg_i)
-    , AUTONAME(clk_i)
-    , AUTONAME(result_o)
-    , AUTONAME(state_o)
-    , AUTONAME(sl_tr_a_o)
-    , AUTONAME(sl_tr_result_i)
-    , AUTONAME(p_tr_a_o)
-    , AUTONAME(p_tr_result_i)
 {
-    result_o.bind(result_s_);
-    state_o.bind(state_s_);
-    sl_tr_a_o.bind(sl_tr_a_s_);
-    p_tr_a_o.bind(p_tr_a_s_);
-
     SC_THREAD(thread);
-
-    state_s_.write(State::CLEAR);
 }
 
 void Gn::thread()
 {
     while (true)
     {
-        switch (static_cast<State>(state_s_.read().to_int()))
+        switch (static_cast<State>(state_o.read().to_int()))
         {
             case State::CLEAR:
                 {
-                    result_s_.write(0);
-                    sl_tr_a_s_.write(0);
-                    p_tr_a_s_.write(0);
+                    result_o.write(0);
+                    sl_tr_a_o.write(0);
+                    p_tr_a_o.write(0);
 
                     WAIT_WHILE_CLK(trg_i->read() == 0,
                                    clk_i->posedge_event());
@@ -139,7 +115,7 @@ void Gn::thread()
                 }
             case State::BUSY:
                 {
-                    result_s_.write(compute_gn());
+                    result_o.write(compute_gn());
                     advance_state(State::DONE);
                     break;
                 }
@@ -158,15 +134,15 @@ void Gn::thread()
 
 void Gn::trace(sc_core::sc_trace_file *tf)
 {
-    sc_core::sc_trace(tf, result_s_, "Gn.result");
-    sc_core::sc_trace(tf, state_s_, "Gn.state");
-    sc_core::sc_trace(tf, sl_tr_a_s_, "Gn.sl_tr_a");
-    sc_core::sc_trace(tf, p_tr_a_s_, "Gn.p_tr_a");
+    sc_core::sc_trace(tf, result_o, result_o.name());
+    sc_core::sc_trace(tf, state_o, state_o.name());
+    sc_core::sc_trace(tf, sl_tr_a_o, sl_tr_a_o.name());
+    sc_core::sc_trace(tf, p_tr_a_o, p_tr_a_o.name());
 }
 
 void Gn::advance_state(State next_state)
 {
-    state_s_.write(next_state);
+    state_o.write(next_state);
 }
 
 // What you are about to see here is insane.
@@ -226,10 +202,10 @@ u512 Gn::compute_gn()
 
                     r1 = prev_k ^ *C[i.to_int() - 1];
 
-                    p_tr_a_s_.write(r1);
+                    p_tr_a_o.write(r1);
                     sc_core::wait(clk_i->posedge_event());
 
-                    sl_tr_a_s_.write(p_tr_result_i->read());
+                    sl_tr_a_o.write(p_tr_result_i->read());
                     sc_core::wait(clk_i->posedge_event());
 
                     if (i < C_SIZE)
@@ -253,10 +229,10 @@ u512 Gn::compute_gn()
                     DEBUG_OUT << "E_STEP1 " << "m = " << m.to_string(sc_dt::SC_HEX) << std::endl;
                     DEBUG_OUT << "E_STEP1 " << "k = " << k.to_string(sc_dt::SC_HEX) << std::endl;
 
-                    p_tr_a_s_.write(m ^ k);
+                    p_tr_a_o.write(m ^ k);
                     sc_core::wait(clk_i->posedge_event());
 
-                    sl_tr_a_s_.write(p_tr_result_i->read());
+                    sl_tr_a_o.write(p_tr_result_i->read());
                     sc_core::wait(clk_i->posedge_event());
 
                     E_STEP3_new_m = sl_tr_result_i->read();
@@ -293,10 +269,10 @@ u512 Gn::compute_gn()
                     DEBUG_OUT << "E_STEP3 " << "new_m = " << new_m.to_string(sc_dt::SC_HEX) << std::endl;
                     DEBUG_OUT << "E_STEP3 " << "prev_k = " << prev_k.to_string(sc_dt::SC_HEX) << std::endl;
 
-                    p_tr_a_s_.write(new_m ^ prev_k);
+                    p_tr_a_o.write(new_m ^ prev_k);
                     sc_core::wait(clk_i->posedge_event());
 
-                    sl_tr_a_s_.write(p_tr_result_i->read());
+                    sl_tr_a_o.write(p_tr_result_i->read());
                     sc_core::wait(clk_i->posedge_event());
 
                     E_STEP3_new_m = sl_tr_result_i->read();
@@ -328,10 +304,10 @@ u512 Gn::compute_gn()
                     DEBUG_OUT << "G_N_STEP1 " << "m = " << m.to_string(sc_dt::SC_HEX) << std::endl;
                     DEBUG_OUT << "G_N_STEP1 " << "n = " << n.to_string(sc_dt::SC_HEX) << std::endl;
 
-                    p_tr_a_s_.write(h ^ n);
+                    p_tr_a_o.write(h ^ n);
                     sc_core::wait(clk_i->posedge_event());
 
-                    sl_tr_a_s_.write(p_tr_result_i->read());
+                    sl_tr_a_o.write(p_tr_result_i->read());
                     sc_core::wait(clk_i->posedge_event());
 
                     E_STEP1_k = sl_tr_result_i->read();

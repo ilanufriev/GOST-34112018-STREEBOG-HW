@@ -119,12 +119,24 @@ int sc_main(int argc, char **argv)
 
     streebog_hw::Gost34112018_Hw gost("GOSTHW");
 
-    sc_core::sc_signal<bool> &trg = gost.trg_i;
-    sc_core::sc_signal<bool> &reset = gost.reset_i;
-    sc_core::sc_signal<bool> &hash_size = gost.hash_size_i;
-    sc_core::sc_signal<bool> &clk = gost.clk_i;
-    sc_core::sc_signal<streebog_hw::u512> &block = gost.block_i;
-    sc_core::sc_signal<streebog_hw::u8>   &block_size = gost.block_size_i;
+    sc_core::sc_signal<bool> trg;
+    sc_core::sc_signal<bool> reset;
+    sc_core::sc_signal<bool> hash_size;
+    sc_core::sc_signal<bool> clk;
+    sc_core::sc_signal<streebog_hw::u512> block;
+    sc_core::sc_signal<streebog_hw::u8>   block_size;
+
+    sc_core::sc_signal<streebog_hw::u512> hash;
+    sc_core::sc_signal<streebog_hw::Gost34112018_Hw::ScState> state;
+
+    gost.trg_i.bind(trg);
+    gost.reset_i.bind(reset);
+    gost.hash_size_i.bind(hash_size);
+    gost.clk_i.bind(clk);
+    gost.block_i.bind(block);
+    gost.block_size_i.bind(block_size);
+    gost.hash_o.bind(hash);
+    gost.state_o.bind(state);
 
 #ifdef __ENABLE_WAVEFORM_TRACING__
     sc_core::sc_trace_file *tf = sc_core::sc_create_vcd_trace_file("Gost34112018_Hw_trace");
@@ -150,8 +162,8 @@ int sc_main(int argc, char **argv)
         DEBUG_OUT << "hash_size = " << hash_size.read() << std::endl;
 
         DEBUG_OUT << "Waiting for ready or done\n";
-        ADVANCE_WHILE_CLK(gost.read_state() != streebog_hw::Gost34112018_Hw::State::READY &&
-                          gost.read_state() != streebog_hw::Gost34112018_Hw::State::DONE,
+        ADVANCE_WHILE_CLK(gost.state_o->read() != streebog_hw::Gost34112018_Hw::State::READY &&
+                          gost.state_o->read() != streebog_hw::Gost34112018_Hw::State::DONE,
                           clk);
     };
 
@@ -220,7 +232,7 @@ int sc_main(int argc, char **argv)
     // Format the input: print them in the right order
     std::string hash_str;
     std::array<unsigned char, BLOCK_SIZE> hash_bytes_full;
-    streebog_hw::sc_uint512_to_bytes(hash_bytes_full.data(), hash_bytes_full.size(), gost.read_hash());
+    streebog_hw::sc_uint512_to_bytes(hash_bytes_full.data(), hash_bytes_full.size(), gost.hash_o->read());
     
     std::vector<unsigned char> hash_bytes_result(
         hash_bytes_full.rbegin(),
@@ -257,7 +269,7 @@ int sc_main(int argc, char **argv)
 
     trg.write(0);
 
-    ADVANCE_WHILE_CLK(gost.read_state() != streebog_hw::Gost34112018_Hw::State::CLEAR,
+    ADVANCE_WHILE_CLK(gost.state_o->read() != streebog_hw::Gost34112018_Hw::State::CLEAR,
                       clk);
 
 #ifdef __ENABLE_WAVEFORM_TRACING__

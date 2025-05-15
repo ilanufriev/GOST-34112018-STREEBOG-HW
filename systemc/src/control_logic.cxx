@@ -8,67 +8,37 @@ namespace streebog_hw
 {
 
 ControlLogic::ControlLogic(sc_core::sc_module_name const &name)
-    : AUTONAME(trg_i)
-    , AUTONAME(reset_i)
-    , AUTONAME(block_i)
-    , AUTONAME(block_size_i)
-    , AUTONAME(hash_size_i)
-    , AUTONAME(clk_i)
-    , AUTONAME(state_o)
-    , AUTONAME(hash_o)
-    , AUTONAME(sigma_nx_i)
-    , AUTONAME(n_nx_i)
-    , AUTONAME(h_nx_i)
-    , AUTONAME(st_state_i)
-    , AUTONAME(st_block_o)
-    , AUTONAME(st_block_size_o)
-    , AUTONAME(sigma_o)
-    , AUTONAME(n_o)
-    , AUTONAME(h_o)
-    , AUTONAME(st_trg_o)
 {
-    state_o.bind(state_s_);
-    hash_o.bind(hash_s_);
-    st_block_o.bind(st_block_s_);
-    st_block_size_o.bind(st_block_size_s_);
-    sigma_o.bind(sigma_s_);
-    n_o.bind(n_s_);
-    h_o.bind(h_s_);
-    st_trg_o.bind(st_trg_s_);
-
     SC_THREAD(thread);
-
-    state_s_.write(ControlLogic::State::CLEAR);
 }
 
 void ControlLogic::trace(sc_core::sc_trace_file *tf)
 {
-    sc_core::sc_trace(tf, state_s_, "ControlLogic.state");
-    sc_core::sc_trace(tf, hash_s_, "ControlLogic.hash");
-    sc_core::sc_trace(tf, st_block_s_, "ControlLogic.st_block");
-    sc_core::sc_trace(tf, st_block_size_s_, "ControlLogic.st_block_size");
-    sc_core::sc_trace(tf, sigma_s_, "ControlLogic.sigma");
-    sc_core::sc_trace(tf, n_s_, "ControlLogic.n");
-    sc_core::sc_trace(tf, h_s_, "ControlLogic.h");
-    sc_core::sc_trace(tf, st_trg_s_, "ControlLogic.st_start");
-    sc_core::sc_trace(tf, st_sel_s_, "ControlLogic.st_sel");
+    sc_core::sc_trace(tf, state_o, state_o.name());
+    sc_core::sc_trace(tf, hash_o, hash_o.name());
+    sc_core::sc_trace(tf, st_block_o, st_block_o.name());
+    sc_core::sc_trace(tf, st_block_size_o, st_block_size_o.name());
+    sc_core::sc_trace(tf, sigma_o, sigma_o.name());
+    sc_core::sc_trace(tf, n_o, n_o.name());
+    sc_core::sc_trace(tf, h_o, h_o.name());
+    sc_core::sc_trace(tf, st_trg_o, st_trg_o.name());
 }
 
 void ControlLogic::thread()
 {
     while (true)
     {
-        switch (static_cast<ControlLogic::State>(state_s_.read().to_int()))
+        switch (static_cast<ControlLogic::State>(state_o->read().to_int()))
         {
             case State::CLEAR:
                 {
-                    hash_s_.write(0);
-                    st_block_s_.write(0);
-                    st_block_size_s_.write(0);
-                    sigma_s_.write(0);
-                    n_s_.write(0);
-                    h_s_.write(0);
-                    st_trg_s_.write(0);
+                    hash_o.write(0);
+                    st_block_o.write(0);
+                    st_block_size_o.write(0);
+                    sigma_o.write(0);
+                    n_o.write(0);
+                    h_o.write(0);
+                    st_trg_o.write(0);
 
                     DEBUG_OUT << "State CLEAR" << std::endl;
                     WAIT_WHILE_CLK(trg_i->read() == 0, 
@@ -101,18 +71,18 @@ void ControlLogic::thread()
                         next_state = State::DONE;
                     }
 
-                    sigma_s_.write(sigma_);
-                    n_s_.write(n_);
-                    h_s_.write(h_);
+                    sigma_o.write(sigma_);
+                    n_o.write(n_);
+                    h_o.write(h_);
 
-                    st_block_s_.write(block_);
-                    st_block_size_s_.write(block_size_);
+                    st_block_o.write(block_);
+                    st_block_size_o.write(block_size_);
 
-                    st_trg_s_.write(1);
+                    st_trg_o.write(1);
 
                     sc_core::wait(clk_i->posedge_event());
 
-                    st_trg_s_.write(0);
+                    st_trg_o.write(0);
 
                     WAIT_WHILE_CLK(st_state_i->read() != Stage::State::DONE,
                                    clk_i->posedge_event());
@@ -125,11 +95,11 @@ void ControlLogic::thread()
                     DEBUG_OUT << "n_nx_i = " << n_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
                     DEBUG_OUT << "h_nx_i = " << h_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
 
-                    st_trg_s_.write(1);
+                    st_trg_o.write(1);
 
                     sc_core::wait(clk_i->posedge_event());
 
-                    st_trg_s_.write(0); // This will reset Stage to CLEAR
+                    st_trg_o.write(0); // This will reset Stage to CLEAR
 
                     if (next_state == State::DONE)
                     {
@@ -165,7 +135,7 @@ void ControlLogic::thread()
 
 void ControlLogic::advance_state(State next_state)
 {
-    state_s_.write(next_state);
+    state_o.write(next_state);
 }
 
 };
