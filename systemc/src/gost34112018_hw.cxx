@@ -1,3 +1,4 @@
+#include "datatypes.hxx"
 #include <control_logic.hxx>
 #include <utils.hxx>
 #include <gost34112018_hw.hxx>
@@ -85,6 +86,28 @@ Gost34112018_Hw::Gost34112018_Hw(sc_core::sc_module_name const &name)
 
 void Gost34112018_Hw::thread()
 {
+}
+
+std::vector<EventTableEntry> Gost34112018_Hw::get_events() const
+{
+    std::vector<EventTableEntry> events;
+
+    for (const EventTableEntry& e : cl_->get_events())
+    {
+        events.push_back(e);
+    }
+
+    for (const EventTableEntry& e : st_->get_events())
+    {
+        events.push_back(e);
+    }
+
+    for (const EventTableEntry& e : gn_->get_events())
+    {
+        events.push_back(e);
+    }
+
+    return events;
 }
 
 void Gost34112018_Hw::trace(sc_core::sc_trace_file *tf)

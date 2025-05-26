@@ -1,7 +1,6 @@
 #include <gost34112018_hw.hxx>
 #include <common.hxx>
 #include <datatypes.hxx>
-#include <sysc/kernel/sc_wait.h>
 #include <utils.hxx>
 #include <stage.hxx>
 
@@ -44,7 +43,7 @@ std::string array_to_hex_string(const std::array<unsigned char, N> &arr, const s
 
 namespace po = boost::program_options;
 
-int64_t g_clock_counter = 0;
+int64_t &g_clock_counter = streebog_hw::g_clock_counter;
 
 void wait_clk(int cycles, sc_core::sc_signal<bool> &clk)
 {
@@ -157,11 +156,6 @@ int sc_main(int argc, char **argv)
 
         trg.write(0);
 
-        DEBUG_OUT << "block = " << block.read().to_string(sc_dt::SC_HEX) << std::endl;
-        DEBUG_OUT << "block_size = " << block_size.read() << std::endl;
-        DEBUG_OUT << "hash_size = " << hash_size.read() << std::endl;
-
-        DEBUG_OUT << "Waiting for ready or done\n";
         ADVANCE_WHILE_CLK(gost.state_o->read() != streebog_hw::Gost34112018_Hw::State::READY &&
                           gost.state_o->read() != streebog_hw::Gost34112018_Hw::State::DONE,
                           clk);
@@ -169,15 +163,11 @@ int sc_main(int argc, char **argv)
 
     sc_core::sc_start(0, sc_core::SC_NS);
 
-    wait_clk(4, clk);
-
     int32_t rc = 0;
     int32_t last_block_size = 64;
 
     while (!fin.eof())
     {
-        DEBUG_OUT << "Read started\n";
-        
         // I know that this is very dirty, but the entire library
         // libgost34112018 uses unsigned values since they represent 
         // abstract bits. The library also makes use of the overflow
@@ -191,17 +181,13 @@ int sc_main(int argc, char **argv)
         if (rc < buffer.size() || fin.eof())
             continue;
 
-        DEBUG_OUT << "Read rc = " << rc << " bytes\n";
         for (int i = 0; i < rc; i += BLOCK_SIZE)
         {
-            DEBUG_OUT << "Hashing block " << i << std::endl;
             hash_block(buffer.data() + i, BLOCK_SIZE, hash_size_opt);
             last_block_size = BLOCK_SIZE;
         }
         rc = 0;
     }
-
-    DEBUG_OUT << array_to_hex_string(buffer, 96) << std::endl;
 
     // we hit feof, but rc is not empty
     if (rc != 0)
@@ -209,12 +195,9 @@ int sc_main(int argc, char **argv)
         int i;
         for (i = 0; (i + BLOCK_SIZE) < rc; i += BLOCK_SIZE)
         {
-            DEBUG_OUT << "Hashing block #" << (i + 1) << std::endl;
             hash_block(buffer.data() + i, BLOCK_SIZE, hash_size_opt);
             last_block_size = BLOCK_SIZE;
         }
-
-        DEBUG_OUT << "Hashing the last block" << std::endl;
 
         // Hash the rest of the message
         hash_block(buffer.data() + i, rc - i, hash_size_opt);
@@ -225,7 +208,6 @@ int sc_main(int argc, char **argv)
     // if the data size is divisible by 64
     if (last_block_size == BLOCK_SIZE)
     {
-        DEBUG_OUT << "Ending the hashing" << std::endl;
         hash_block(nullptr, 0, hash_size_opt);
     }
 
@@ -275,6 +257,13 @@ int sc_main(int argc, char **argv)
 #ifdef __ENABLE_WAVEFORM_TRACING__
     sc_core::sc_close_vcd_trace_file(tf);
 #endif
+
+    std::vector<streebog_hw::EventTableEntry> events = gost.get_events();
+
+    for (const streebog_hw::EventTableEntry& e : events)
+    {
+         std::cout << e.clk << "," << e.description << "," << e.source << "\n";
+    }
 
     return 0;
 }

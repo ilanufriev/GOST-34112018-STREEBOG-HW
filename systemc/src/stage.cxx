@@ -1,6 +1,6 @@
+#include "common.hxx"
 #include <cstdio>
 #include <systemc>
-#include <iostream>
 #include <utils.hxx>
 #include <stage.hxx>
 #include <gost34112018.h>
@@ -38,7 +38,7 @@ void Stage::thread()
         {
             case State::CLEAR:
                 {
-                    DEBUG_OUT << "Stage is now at CLEAR\n";
+                    DEBUG_OUT << "State CLEAR" << " at " << g_clock_counter << " clks" << std::endl;
  
                     h_ = n_ = sigma_ = 0;
 
@@ -51,15 +51,17 @@ void Stage::thread()
                     g_n_h_o.write(0);
                     g_n_trg_o.write(0);
 
-                    WAIT_WHILE_CLK(trg_i->read() == 0,
-                                   clk_i->posedge_event());
+                    WAIT_WHILE_CLK_EXPR(trg_i->read() == 0,
+                        clk_i->posedge_event(),
+                            events_.emplace_back(g_clock_counter, 
+                                                 "Waiting for trg", this->name()));
 
                     advance_state(State::BUSY);
                     break;
                 }
             case State::BUSY:
                 {
-                    DEBUG_OUT << "Stage is now at BUSY\n";
+                    DEBUG_OUT << "State BUSY" << " at " << g_clock_counter << " clks" << std::endl;
                     if (block_size_i->read() == BLOCK_SIZE)
                     {
                         stage2();
@@ -70,18 +72,21 @@ void Stage::thread()
                     }
 
                     advance_state(State::DONE);
+
                     break;
                 }
             case State::DONE:
                 {
-                    DEBUG_OUT << "Stage is now at DONE\n";
-                    WAIT_WHILE_CLK(trg_i->read() == 0,
-                                   clk_i->posedge_event());
+                    DEBUG_OUT << "State DONE" << " at " << g_clock_counter << " clks" << std::endl;
+                    WAIT_WHILE_CLK_EXPR(trg_i->read() == 0,
+                        clk_i->posedge_event(), events_.emplace_back(g_clock_counter,
+                                                                     "Waiting for trg", this->name()));
 
-                    advance_state(State::CLEAR);
+                    advance_state(State::BUSY);
                     break;
                 }
         }
+        events_.emplace_back(g_clock_counter, "Transitioning to another state", this->name());
         sc_core::wait(clk_i->posedge_event());
     }
 }
@@ -94,30 +99,28 @@ u512 Stage::compute_gn(const u512 &h, const u512 &m, const u512&n)
 
     g_n_trg_o.write(1);
 
+    events_.emplace_back(g_clock_counter, "Triggering gn", this->name());
     sc_core::wait(clk_i->posedge_event());
 
     g_n_trg_o.write(0);
 
-    WAIT_WHILE_CLK(g_n_state_i->read() != Gn::State::DONE,
-                   clk_i->posedge_event());
+    WAIT_WHILE_CLK_EXPR(g_n_state_i->read() != Gn::State::BUSY,
+                   clk_i->posedge_event(), events_.emplace_back(g_clock_counter, 
+                                                                "Waiting for gn to become busy", 
+                                                                this->name()));
+
+    WAIT_WHILE_CLK_EXPR(g_n_state_i->read() != Gn::State::DONE,
+                   clk_i->posedge_event(), events_.emplace_back(g_clock_counter,
+                                                                "Waiting for gn to become done",
+                                                                this->name()));
 
     u512 result = g_n_result_i->read();
-
-    g_n_trg_o.write(1);
-
-    sc_core::wait(clk_i->posedge_event());
-
-    g_n_trg_o.write(0); // This will reset Gn to CLEAR
 
     return result;
 }
 
 void Stage::stage2()
 {
-    DEBUG_OUT << "h_i = " << h_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-    DEBUG_OUT << "block_i = " << block_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-    DEBUG_OUT << "n_i = " << n_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-
     u512 gn = compute_gn(h_i->read(), block_i->read(), n_i->read());
 
     h_nx_o.write(gn);
@@ -134,12 +137,6 @@ void Stage::stage3()
 
     block |= u512{01} << (block_size_i->read() * 8);
 
-    DEBUG_OUT << "h_i = " << h_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-    DEBUG_OUT << "n_i = " << n_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-    DEBUG_OUT << "sigma_i = " << sigma_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-    DEBUG_OUT << "block_i = " << block_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-    DEBUG_OUT << "Padded block: " << block.to_string(sc_dt::SC_HEX) << std::endl;
-
     h = compute_gn(h_i->read(), block, n_i->read());
     n = n_i->read() + u512{block_size_i->read() * 8};
     sigma = sigma_i->read() + block;
@@ -150,6 +147,11 @@ void Stage::stage3()
     h_nx_o.write(h);
     n_nx_o.write(n);
     sigma_nx_o.write(sigma);
+}
+
+const std::vector<EventTableEntry> &Stage::get_events() const
+{
+    return events_;
 }
 
 void Stage::advance_state(State next_state)

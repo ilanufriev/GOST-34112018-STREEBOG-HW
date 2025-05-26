@@ -53,8 +53,9 @@ struct ControlLogic : public sc_core::sc_module
     sc_core::sc_out<bool> st_trg_o        {"st_trg_o"};
 
     void trace(sc_core::sc_trace_file *tf);
-
+    const std::vector<EventTableEntry> &get_events() const;
 private:
+
     void advance_state(State next_state);
 
     u512 block_;
@@ -64,6 +65,8 @@ private:
     u512 sigma_;
     u512 h_;
     u512 n_;
+
+    std::vector<EventTableEntry> events_;
 };
 
 }

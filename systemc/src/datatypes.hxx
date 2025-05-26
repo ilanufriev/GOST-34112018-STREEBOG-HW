@@ -1,6 +1,7 @@
 #ifndef __DATATYPES_HXX__
 #define __DATATYPES_HXX__
 
+#include <cstdint>
 #include <systemc>
 
 namespace streebog_hw
@@ -22,6 +23,19 @@ using out_export = sc_core::sc_export<sc_core::sc_signal_out_if<T>>;
 
 template < typename T >
 using in_port = sc_core::sc_port<sc_core::sc_signal_in_if<T>>;
+
+struct EventTableEntry
+{
+    int64_t clk;
+    std::string description;
+    std::string source;
+
+    EventTableEntry(int64_t clk, std::string description, std::string source)
+        : clk{clk}
+        , description{std::move(description)}
+        , source{std::move(source)} {}
+};
+
 
 };
 

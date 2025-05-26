@@ -5,6 +5,7 @@
 #include <transformations.hxx>
 #include <common.hxx>
 #include <systemc>
+#include <vector>
 
 namespace streebog_hw
 {
@@ -44,6 +45,7 @@ struct Stage : public sc_core::sc_module
     sc_core::sc_out<bool> g_n_trg_o         {"g_n_trg_o"};
 
     void trace(sc_core::sc_trace_file *tf);
+    const std::vector<EventTableEntry> &get_events() const;
 private:
     void stage2();
     void stage3();
@@ -53,6 +55,8 @@ private:
     u512 h_ = 0;
     u512 n_ = 0;
     u512 sigma_ = 0;
+
+    std::vector<EventTableEntry> events_;
 };
 
 }

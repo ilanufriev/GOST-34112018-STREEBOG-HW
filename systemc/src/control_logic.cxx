@@ -1,3 +1,4 @@
+#include "datatypes.hxx"
 #include <control_logic.hxx>
 #include <utils.hxx>
 #include <common.hxx>
@@ -41,9 +42,10 @@ void ControlLogic::thread()
                     h_o.write(0);
                     st_trg_o.write(0);
 
-                    DEBUG_OUT << "State CLEAR" << std::endl;
-                    WAIT_WHILE_CLK(trg_i->read() == 0, 
-                                   clk_i->posedge_event());
+                    DEBUG_OUT << "State CLEAR" << " at " << g_clock_counter << " clks" << std::endl;
+                    WAIT_WHILE_CLK_EXPR(trg_i->read() == 0, 
+                                    clk_i->posedge_event(),
+                                    events_.emplace_back(g_clock_counter, "Waiting for trg", this->name()));
 
                     hash_size_ = hash_size_i->read();
 
@@ -53,13 +55,13 @@ void ControlLogic::thread()
                                              : INIT_VECTOR_256;
 
                     advance_state(State::BUSY);
-                    break;
+                    break; // Do not wait for a next posedge.
                 }
             case State::BUSY:
                 {
                     State next_state;
 
-                    DEBUG_OUT << "State BUSY" << std::endl;
+                    DEBUG_OUT << "State BUSY" << " at " << g_clock_counter << " clks" << std::endl;
                     block_      = block_i->read();
                     block_size_ = block_size_i->read();
 
@@ -80,27 +82,25 @@ void ControlLogic::thread()
                     st_block_size_o.write(block_size_);
 
                     st_trg_o.write(1);
-
+                    
+                    events_.emplace_back(g_clock_counter, "Triggering stage", this->name());
                     sc_core::wait(clk_i->posedge_event());
 
                     st_trg_o.write(0);
 
-                    WAIT_WHILE_CLK(st_state_i->read() != Stage::State::DONE,
-                                   clk_i->posedge_event());
+                    WAIT_WHILE_CLK_EXPR(st_state_i->read() != Stage::State::BUSY,
+                        clk_i->posedge_event(),
+                            events_.emplace_back(g_clock_counter, 
+                                                 "Waiting for the stage to become busy", this->name()));
+
+                    WAIT_WHILE_CLK_EXPR(st_state_i->read() != Stage::State::DONE,
+                        clk_i->posedge_event(),
+                        events_.emplace_back(g_clock_counter,
+                                                "Waiting for the stage to become done", this->name()));
 
                     sigma_ = sigma_nx_i->read();
                     n_     = n_nx_i->read();
                     h_     = h_nx_i->read();
-
-                    DEBUG_OUT << "sigma_nx_i = " << sigma_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "n_nx_i = " << n_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "h_nx_i = " << h_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-
-                    st_trg_o.write(1);
-
-                    sc_core::wait(clk_i->posedge_event());
-
-                    st_trg_o.write(0); // This will reset Stage to CLEAR
 
                     if (next_state == State::DONE)
                     {
@@ -112,26 +112,36 @@ void ControlLogic::thread()
                 }
             case State::READY:
                 {
-                    DEBUG_OUT << "State READY" << std::endl;
-                    WAIT_WHILE_CLK(trg_i->read() == 0,
-                                   clk_i->posedge_event());
+                    DEBUG_OUT << "State READY" << " at " << g_clock_counter << " clks" << std::endl;
+                    WAIT_WHILE_CLK_EXPR(trg_i->read() == 0,
+                        clk_i->posedge_event(),
+                            events_.emplace_back(g_clock_counter,
+                                                 "Waiting for trg in READY", this->name()));
 
                     advance_state(State::BUSY);
                     break;
                 }
             case State::DONE:
                 {
-                    DEBUG_OUT << "State DONE" << std::endl;
-                    WAIT_WHILE_CLK(trg_i->read() == 0,
-                                   clk_i->posedge_event());
+                    DEBUG_OUT << "State DONE" << " at " << g_clock_counter << " clks" << std::endl;
+                    WAIT_WHILE_CLK_EXPR(trg_i->read() == 0,
+                        clk_i->posedge_event(),
+                        events_.emplace_back(g_clock_counter,
+                                             "Waiting for trg in DONE", this->name()));
 
                     advance_state(State::CLEAR);
                     break;
                 }
         }
 
+        events_.emplace_back(g_clock_counter, "Transitioning to another state", this->name());
         sc_core::wait(clk_i->posedge_event());
     }
+}
+
+const std::vector<EventTableEntry> &ControlLogic::get_events() const
+{
+    return events_;
 }
 
 void ControlLogic::advance_state(State next_state)

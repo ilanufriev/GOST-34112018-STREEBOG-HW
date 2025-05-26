@@ -40,6 +40,7 @@ struct Gost34112018_Hw : public sc_core::sc_module
     sc_core::sc_out<ScState> state_o               {"state_o"};
     sc_core::sc_out<sc_dt::sc_biguint<512>> hash_o {"hash_o"};
 
+    std::vector<EventTableEntry> get_events() const;
 private:
     using u512 = sc_dt::sc_biguint<512>;
     using u8   = sc_dt::sc_uint<8>;

@@ -12,6 +12,9 @@
 #define WAIT_WHILE_CLK(__condition, __clk_expr) \
     while(__condition) { sc_core::wait(__clk_expr); }
 
+#define WAIT_WHILE_CLK_EXPR(__condition, __clk_expr, __expr) \
+    while(__condition) { __expr; sc_core::wait(__clk_expr); }
+
 #define __ENABLE_WAVEFORM_TRACING__
 #define __ENABLE_DEBUG_MESSAGES__
 

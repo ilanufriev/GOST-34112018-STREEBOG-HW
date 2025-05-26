@@ -66,9 +66,12 @@ struct Gn : public sc_core::sc_module
     sc_core::sc_out<u512> sl_tr_a_o {"sl_tr_a_o"};
     sc_core::sc_out<u512> p_tr_a_o  {"p_tr_a_o"};
 
+    const std::vector<EventTableEntry> &get_events() const;
 private:
     void advance_state(State next_state);
     u512 compute_gn();
+
+    std::vector<EventTableEntry> events_;
 };
 
 extern const uint64_t sl_precomp_table[8][256];
