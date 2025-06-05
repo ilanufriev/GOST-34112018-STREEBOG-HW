@@ -1,4 +1,3 @@
-
 module strhw_control_logic import strhw_common_types::*;  #() (
     input  logic             rst_i,
     input  logic             clk_i,
@@ -30,28 +29,29 @@ module strhw_control_logic import strhw_common_types::*;  #() (
     input  uint512           st_sigma_new_i,
     input  uint512           st_n_new_i,
     input  uint512           st_h_new_i
+
   );
 
-  state_t                   state_next; 
-  uint512                   hash_next;
-  logic                     st_trg_next;
-  uint512                   st_block_next;
-  uint6                     st_block_size_next;
-  uint512                   st_sigma_next;
-  uint512                   st_n_next;
-  uint512                   st_h_next;
+  state_t                    state_next; 
+  uint512                    hash_next;
+  logic                      st_trg_next;
+  uint512                    st_block_next;
+  uint6                      st_block_size_next;
+  uint512                    st_sigma_next;
+  uint512                    st_n_next;
+  uint512                    st_h_next;
 
-  always_ff @(posedge clk) begin : update_state_on_clk
-    if (rst) begin
+  always_ff @(posedge clk_i or posedge rst_i) begin : update_state_on_clk
+    if (rst_i) begin
       // reset signals
       state_o         <= CLEAR; 
-      hash_o          <= 0;
+      hash_o          <= 512'h0;
       st_trg_o        <= 0;
-      st_block_o      <= 0;
-      st_block_size_o <= 0;
-      st_sigma_o      <= 0;
-      st_n_o          <= 0;
-      st_h_o          <= 0;
+      st_block_o      <= 512'h0;
+      st_block_size_o <= 6'h0;
+      st_sigma_o      <= 512'h0;
+      st_n_o          <= 512'h0;
+      st_h_o          <= 512'h0;
     end else begin
       state_o         <= state_next; 
       hash_o          <= hash_next;
@@ -71,7 +71,6 @@ module strhw_control_logic import strhw_common_types::*;  #() (
         st_block_next = 512'h0;
         st_block_size_next = 6'h0;
         st_sigma_next = 512'h0;
-        st_sigma_next = 
       end
       BUSY:  begin
 
@@ -83,7 +82,7 @@ module strhw_control_logic import strhw_common_types::*;  #() (
 
       end
     endcase    
-  end : state machine
+  end : state_machine
 
 endmodule
 
