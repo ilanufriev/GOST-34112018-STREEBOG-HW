@@ -40,14 +40,14 @@ void PTransform::method()
     u512 result = 0;
     std::array<unsigned char, BLOCK_SIZE> a_bytes;
     std::array<unsigned char, BLOCK_SIZE> result_bytes;
-    
+
     sc_uint512_to_bytes(a_bytes.data(), a_bytes.size(), a_i->read());
 
     for (int i = 0; i < BLOCK_SIZE; i++)
     {
         result_bytes[i] = a_bytes[TAU[i]];
     }
-    
+
     result_o.write(bytes_to_sc_uint512(result_bytes.data(), result_bytes.size()));
 }
 

@@ -82,7 +82,7 @@ void ControlLogic::thread()
                     st_block_size_o.write(block_size_);
 
                     st_trg_o.write(1);
-                    
+
                     events_.emplace_back(g_clock_counter, "Triggering stage", this->name());
                     sc_core::wait(clk_i->posedge_event());
 
