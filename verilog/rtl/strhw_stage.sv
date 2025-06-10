@@ -41,16 +41,16 @@ module strhw_stage import strhw_common_types::*; #() (
 
   // Internal registers
   istate_t                   istate;
-  s2_cstep_t                s2_cstep;
-  s3_cstep_t                s3_cstep;
+  s2_cstep_t                 s2_cstep;
+  s3_cstep_t                 s3_cstep;
   uint512                    padded_block;
   uint512                    h;
   uint512                    n;
   uint512                    sigma;
 
   istate_t                   istate_next;
-  s2_cstep_t                s2_cstep_next;
-  s3_cstep_t                s3_cstep_next;
+  s2_cstep_t                 s2_cstep_next;
+  s3_cstep_t                 s3_cstep_next;
   uint512                    padded_block_next;
   uint512                    h_next;
   uint512                    n_next;
