@@ -115,7 +115,7 @@ module strhw_gn import strhw_common_types::*; #() (
   uint512                   sl_tr_a_next;
   uint512                   p_tr_a_next;
 
-  always_ff @(posedge clk_i or posedge rst_i) begin : update_state_on_clk
+  always_ff @(posedge clk_i) begin : update_state_on_clk
     if (rst_i) begin
       result_o  <= 512'h0;
       state_o   <= CLEAR;

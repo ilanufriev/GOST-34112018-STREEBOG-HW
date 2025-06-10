@@ -70,7 +70,7 @@ module strhw_control_logic import strhw_common_types::*;  #() (
   uint512                    st_n_next;
   uint512                    st_h_next;
 
-  always_ff @(posedge clk_i or posedge rst_i) begin : update_state_on_clk
+  always_ff @(posedge clk_i) begin : update_state_on_clk
     if (rst_i) begin
       // reset signals
       state_o         <= CLEAR; 
