@@ -88,14 +88,14 @@ module strhw_stage import strhw_common_types::*; #() (
       sigma_new_o <= 512'h0;
       n_new_o     <= 512'h0;
       h_new_o     <= 512'h0;
-      state_o    <= CLEAR;
-      g_n_m_o    <= 512'h0;
-      g_n_n_o    <= 512'h0;
-      g_n_h_o    <= 512'h0;
-      g_n_trg_o  <= 1'h0;
-      adder_trg  <= 1'h0;
-      adder_a    <= 512'h0;
-      adder_b    <= 512'h0;
+      state_o     <= CLEAR;
+      g_n_m_o     <= 512'h0;
+      g_n_n_o     <= 512'h0;
+      g_n_h_o     <= 512'h0;
+      g_n_trg_o   <= 1'h0;
+      adder_trg   <= 1'h0;
+      adder_a     <= 512'h0;
+      adder_b     <= 512'h0;
     end else begin // on clk_i
       sigma_new_o <= sigma_new_next;
       n_new_o     <= n_new_next;
@@ -106,9 +106,9 @@ module strhw_stage import strhw_common_types::*; #() (
       g_n_h_o     <= g_n_h_next;
       g_n_trg_o   <= g_n_trg_next;
 
-      istate     <= istate_next;
-      s2_cstep  <= s2_cstep_next;
-      s3_cstep  <= s3_cstep_next;
+      istate   <= istate_next;
+      s2_cstep <= s2_cstep_next;
+      s3_cstep <= s3_cstep_next;
 
       padded_block <= padded_block_next;
 
@@ -133,8 +133,8 @@ module strhw_stage import strhw_common_types::*; #() (
 
     g_n_trg_next   = g_n_trg_o;
     istate_next    = istate;
-    s2_cstep_next = s2_cstep;
-    s3_cstep_next = s3_cstep;
+    s2_cstep_next  = s2_cstep;
+    s3_cstep_next  = s3_cstep;
     state_next     = state_o;
 
     padded_block_next = padded_block;
