@@ -96,6 +96,8 @@ module strhw_stage import strhw_common_types::*; #() (
       adder_trg   <= 1'h0;
       adder_a     <= 512'h0;
       adder_b     <= 512'h0;
+      s2_cstep    <= 8'd0;
+      s3_cstep    <= 8'd0;
     end else begin // on clk_i
       sigma_new_o <= sigma_new_next;
       n_new_o     <= n_new_next;
