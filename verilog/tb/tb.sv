@@ -6,6 +6,7 @@ module tb;
   import strhw_common_types::*;
 
   byte              buffer[BLOCK_SIZE];
+  int               clock_counter;
   int               bytes_read;
 
   logic             rst;
@@ -33,8 +34,13 @@ module tb;
     $dumpvars(0, tb);
   end
 
+  always @(posedge clk) begin
+    clock_counter <= clock_counter + 1;
+  end
+
   initial begin
     clk = 0;
+    clock_counter = 0;
     forever #(`CLOCK_PERIOD/2) clk = ~clk; // 10 ns clock period
   end
 
@@ -122,41 +128,11 @@ module tb;
       $display("File descriptor is %d. Could not read it.", file);
     end
 
-        $finish;
+    if ($test$plusargs("clkcount")) begin
+      $display("clks: %d", clock_counter);
+    end
+
+    $finish;
   end
-
-  // // Test stimulus
-  // initial begin
-  //   // Initialize signals
-  //   rst = 1;
-  //   trg = 0;
-  //   block = 512'h0; // Example block input
-  //   block_size = 7'd0; // Example block size
-  //   hash_size = 1'b0; // Example hash size
-
-  //   // Apply reset
-  //   WAIT(1);
-  //   rst = 0; // Release reset
-  //   WAIT(1);
-
-  //   // Trigger the operation
-  //   trg = 1; // Set trigger
-  //   WAIT(1);
-  //   trg = 0; // Clear trigger
-
-  //   // Wait for some time to observe the output
-  //   WAIT(900);
-
-  //   $display("Output: %x", hash);
-  //   // Finish simulation
-  //   $finish;
-  // end
-
-  // Monitor outputs
-  initial begin
-    // $monitor("Time: %0t | rst: %b | trg: %b | block: %h | block_size: %d | hash_size: %b | state: %h | hash: %h", 
-    //          $time, rst, trg, block, block_size, hash_size, state, hash);
-  end
-
 endmodule
 
