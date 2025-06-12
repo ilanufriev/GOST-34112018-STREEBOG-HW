@@ -43,6 +43,8 @@ module strhw import strhw_common_types::*; #() (
 
   // Gn to transformations connections
   uint512                    sl_tr_result;
+  logic                      sl_tr_ready;
+  logic                      sl_tr_trg;
   uint512                    p_tr_result;
 
   uint512                    sl_tr_a;
@@ -110,14 +112,20 @@ module strhw import strhw_common_types::*; #() (
     .state_o        (g_n_state),
     .sl_tr_result_i (sl_tr_result),
     .p_tr_result_i  (p_tr_result),
+    .sl_tr_ready_i  (sl_tr_ready),
+    .sl_tr_trg_o    (sl_tr_trg),
     .sl_tr_a_o      (sl_tr_a),
     .p_tr_a_o       (p_tr_a)
   );
 
   // Instantiate the strhw_sl module
   strhw_sl sl_inst (
+    .clk_i    (clk_i),
+    .rst_i    (rst_i),
+    .trg_i    (sl_tr_trg),
     .a_i      (sl_tr_a),
-    .result_o (sl_tr_result)
+    .result_o (sl_tr_result),
+    .ready_o  (sl_tr_ready)
   );
 
   // Instantiate the strhw_p module

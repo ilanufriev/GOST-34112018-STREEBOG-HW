@@ -23,7 +23,7 @@ localparam C_SIZE = 12;
 
 localparam BLOCK_SIZE = 64;
 
-localparam ENABLE_DEBUG_OUTPUT = 0;
+localparam ENABLE_DEBUG_OUTPUT = 1;
 
 /* verilator lint_on UNUSEDPARAM */
 endpackage

@@ -18,6 +18,8 @@ module strhw_gn import strhw_common_types::*; #() (
     input  uint512          p_tr_result_i,
 
     // Outputs to SL and P transformations
+    input  logic            sl_tr_ready_i,
+    output logic            sl_tr_trg_o,
     output uint512          sl_tr_a_o,
     output uint512          p_tr_a_o
 
@@ -36,18 +38,22 @@ module strhw_gn import strhw_common_types::*; #() (
     IDLE,
     G_N_STEP1_1,
     G_N_STEP1_2,
+    G_N_STEP1_2_WAIT,
     G_N_STEP1_3,
     G_N_STEP2,
     E_STEP1_1,
     E_STEP1_2,
+    E_STEP1_2_WAIT,
     E_STEP1_3,
     E_STEP2,
     E_STEP3_1,
     E_STEP3_2,
+    E_STEP3_2_WAIT,
     E_STEP3_3,
     E_STEP4,
     K_I_STEP1,
     K_I_STEP2,
+    K_I_STEP2_WAIT,
     K_I_STEP3
   } gn_istate_t;
 
@@ -113,6 +119,7 @@ module strhw_gn import strhw_common_types::*; #() (
   state_t                   state_next;
 
   uint512                   sl_tr_a_next;
+  logic                     sl_tr_trg_next;
   uint512                   p_tr_a_next;
 
   always_ff @(posedge clk_i) begin : update_state_on_clk
@@ -120,6 +127,7 @@ module strhw_gn import strhw_common_types::*; #() (
       result_o  <= 512'h0;
       state_o   <= CLEAR;
       sl_tr_a_o <= 512'h0;
+      sl_tr_trg_o <= 1'h0;
       p_tr_a_o  <= 512'h0;
 
       istate           <= CLEAR_ST1;
@@ -149,6 +157,7 @@ module strhw_gn import strhw_common_types::*; #() (
       state_o   <= state_next;
       sl_tr_a_o <= sl_tr_a_next;
       p_tr_a_o  <= p_tr_a_next;
+      sl_tr_trg_o <= sl_tr_trg_next;
 
       // Internal registers
       istate           <= istate_next;
@@ -228,6 +237,8 @@ module strhw_gn import strhw_common_types::*; #() (
     p_tr_a_next    = p_tr_a_o;
     gn_result_next = gn_result;
 
+    sl_tr_trg_next = sl_tr_trg_o;
+
     e_st1_k_next   = e_st1_k;
     e_st1_m_next   = e_st1_m;
 
@@ -264,12 +275,20 @@ module strhw_gn import strhw_common_types::*; #() (
       end
       G_N_STEP1_2: begin
         sl_tr_a_next = p_tr_result_i;
+        sl_tr_trg_next = 1'b1;
 
         if (ENABLE_DEBUG_OUTPUT) begin
           $display("G_N_STEP1_2 sl_tr_a_next = %0x", sl_tr_a_next);
         end
 
-        gn_istate_next = G_N_STEP1_3;
+        gn_istate_next = G_N_STEP1_2_WAIT;
+      end
+      G_N_STEP1_2_WAIT: begin
+        if (sl_tr_ready_i != 1'b1) begin
+          sl_tr_trg_next = 1'b0;
+        end else begin
+          gn_istate_next = G_N_STEP1_3;
+        end
       end
       G_N_STEP1_3: begin
         e_st1_k_next = sl_tr_result_i;
@@ -293,12 +312,20 @@ module strhw_gn import strhw_common_types::*; #() (
       end
       E_STEP1_2: begin
         sl_tr_a_next = p_tr_result_i;
+        sl_tr_trg_next = 1'b1;
 
         if (ENABLE_DEBUG_OUTPUT) begin
           $display("E_STEP1_2 sl_tr_a_next = %0x", sl_tr_a_next);
         end
 
-        gn_istate_next = E_STEP1_3;
+        gn_istate_next = E_STEP1_2_WAIT;
+      end
+      E_STEP1_2_WAIT: begin
+        if (sl_tr_ready_i != 1'b1) begin
+          sl_tr_trg_next = 1'b0;
+        end else begin
+          gn_istate_next = E_STEP1_3;
+        end
       end
       E_STEP1_3: begin
         e_st3_new_m_next = sl_tr_result_i;
@@ -343,12 +370,20 @@ module strhw_gn import strhw_common_types::*; #() (
       end
       K_I_STEP2: begin
         sl_tr_a_next = p_tr_result_i;
+        sl_tr_trg_next = 1'b1;
 
         if (ENABLE_DEBUG_OUTPUT) begin
           $display("K_I_STEP2 sl_tr_a_next = %0x", sl_tr_a_next);
         end
 
-        gn_istate_next = K_I_STEP3;
+        gn_istate_next = K_I_STEP2_WAIT;
+      end
+      K_I_STEP2_WAIT: begin
+        if (sl_tr_ready_i != 1'b1) begin
+          sl_tr_trg_next = 1'b0;
+        end else begin
+          gn_istate_next = K_I_STEP3;
+        end
       end
       K_I_STEP3: begin
         if (k_i_i < C_SIZE) begin
@@ -380,12 +415,20 @@ module strhw_gn import strhw_common_types::*; #() (
       end
       E_STEP3_2: begin
         sl_tr_a_next = p_tr_result_i;
+        sl_tr_trg_next = 1'b1;
 
         if (ENABLE_DEBUG_OUTPUT) begin
           $display("E_STEP3_2 sl_tr_a_next = %0x", sl_tr_a_next);
         end
 
-        gn_istate_next = E_STEP3_3;
+        gn_istate_next = E_STEP3_2_WAIT;
+      end
+      E_STEP3_2_WAIT: begin
+        if (sl_tr_ready_i != 1'b1) begin
+          sl_tr_trg_next = 1'b0;
+        end else begin
+          gn_istate_next = E_STEP3_3;
+        end
       end
       E_STEP3_3: begin
         e_st3_new_m_next = sl_tr_result_i;
