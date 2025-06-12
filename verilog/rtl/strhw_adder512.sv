@@ -33,6 +33,7 @@ module strhw_adder512 import strhw_common_types::*; #() (
   always @(posedge clk_i) begin
     if (rst_i) begin
       ready_o    <= 0;
+      result_msb <= 256'h0;
     end else begin
       /* verilator lint_off WIDTHEXPAND */
 
