@@ -1,13 +1,9 @@
-#include "common.hxx"
 #include <cstdio>
 #include <systemc>
 #include <utils.hxx>
 #include <stage.hxx>
-#include <gost34112018.h>
 #include <transformations.hxx>
-
-#undef DEBUG_OUT_ENABLED
-#define DEBUG_OUT_ENABLED 1
+#include <common.hxx>
 
 namespace streebog_hw
 {
@@ -72,12 +68,19 @@ void Stage::thread()
                     }
 
                     advance_state(State::DONE);
-
                     break;
                 }
             case State::DONE:
                 {
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(sigma_nx_o.read().to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(n_nx_o.read().to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(h_nx_o.read().to_string(sc_dt::SC_HEX));
+                    }
+
                     DEBUG_OUT << "State DONE" << " at " << g_clock_counter << " clks" << std::endl;
+
                     WAIT_WHILE_CLK_EXPR(trg_i->read() == 0,
                         clk_i->posedge_event(), events_.emplace_back(g_clock_counter,
                                                                      "Waiting for trg", this->name()));
@@ -101,6 +104,13 @@ u512 Stage::compute_gn(const u512 &h, const u512 &m, const u512&n)
 
     events_.emplace_back(g_clock_counter, "Triggering gn", this->name());
     sc_core::wait(clk_i->posedge_event());
+
+    if (__ENABLE_OUTPUT_LOGGING__)
+    {
+        DEBUG_LOG_VAR(g_n_n_o.read().to_string(sc_dt::SC_HEX));
+        DEBUG_LOG_VAR(g_n_h_o.read().to_string(sc_dt::SC_HEX));
+        DEBUG_LOG_VAR(g_n_m_o.read().to_string(sc_dt::SC_HEX));
+    }
 
     g_n_trg_o.write(0);
 
@@ -140,7 +150,7 @@ void Stage::stage3()
     h = compute_gn(h_i->read(), block, n_i->read());
     n = n_i->read() + u512{block_size_i->read() * 8};
     sigma = sigma_i->read() + block;
-    
+
     h = compute_gn(h, n, 0);
     h = compute_gn(h, sigma, 0);
 

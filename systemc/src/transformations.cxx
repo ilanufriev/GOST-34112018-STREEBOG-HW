@@ -49,6 +49,11 @@ void PTransform::method()
     }
 
     result_o.write(bytes_to_sc_uint512(result_bytes.data(), result_bytes.size()));
+    if (__ENABLE_OUTPUT_LOGGING__)
+    {
+        DEBUG_OUT << "result_o = " 
+                  << bytes_to_sc_uint512(result_bytes.data(), result_bytes.size()).to_string(sc_dt::SC_HEX) << "\n";
+    }
 }
 
 void PTransform::trace(sc_core::sc_trace_file *tf)
@@ -66,10 +71,9 @@ void SLTransform::method()
 {
     std::array<uint64_t, BLOCK_SIZE> a_qw;
     std::array<uint64_t, BLOCK_SIZE> result_qw;
-    
     sc_uint512_to_uint64_ts(a_qw.data(), a_qw.size(), a_i->read());
 
-    for (int i = 0; i < BLOCK_SIZE; i++)
+    for (int i = 0; i < 8; i++)
     {
         uint64_t c = 0;
         for (int64_t j = 0; j < sizeof(c); j++)
@@ -82,6 +86,11 @@ void SLTransform::method()
     }
 
     result_o.write(uint64_ts_to_sc_uint512(result_qw.data(), result_qw.size()));
+    if (__ENABLE_OUTPUT_LOGGING__)
+    {
+        DEBUG_OUT << "result_o = " 
+                  << uint64_ts_to_sc_uint512(result_qw.data(), result_qw.size()).to_string(sc_dt::SC_HEX) << "\n";
+    }
 }
 
 void SLTransform::trace(sc_core::sc_trace_file *tf)
@@ -222,11 +231,23 @@ u512 Gn::compute_gn()
                     if (i < C_SIZE)
                     {
                         E_STEP3_prev_k = sl_tr_result_i->read();
+
+                        if (__ENABLE_OUTPUT_LOGGING__)
+                        {
+                            DEBUG_LOG_VAR(E_STEP3_prev_k.to_string(sc_dt::SC_HEX));
+                        }
+
                         cstep = E_STEP3;
                     }
                     else
                     {
                         E_STEP2_prev_k = sl_tr_result_i->read();
+
+                        if (__ENABLE_OUTPUT_LOGGING__)
+                        {
+                            DEBUG_LOG_VAR(E_STEP2_prev_k.to_string(sc_dt::SC_HEX));
+                        }
+
                         cstep = E_STEP2;
                     }
 
@@ -248,6 +269,12 @@ u512 Gn::compute_gn()
                     E_STEP3_new_m = sl_tr_result_i->read();
                     E_STEP2_prev_k = k;
 
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(E_STEP3_new_m.to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(E_STEP2_prev_k.to_string(sc_dt::SC_HEX));
+                    }
+
                     cstep = E_STEP2;
                     break;
                 }
@@ -258,6 +285,12 @@ u512 Gn::compute_gn()
                     K_I_i = K_I_i + 1;
                     K_I_prev_k = prev_k;
 
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(K_I_i.to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(K_I_prev_k.to_string(sc_dt::SC_HEX));
+                    }
+
                     if (K_I_i <= C_SIZE)
                     {
                         cstep = K_I;
@@ -265,6 +298,12 @@ u512 Gn::compute_gn()
                     else
                     {
                         E_STEP4_prev_k = prev_k;
+
+                        if (__ENABLE_OUTPUT_LOGGING__)
+                        {
+                            DEBUG_LOG_VAR(E_STEP4_prev_k.to_string(sc_dt::SC_HEX));
+                        }
+
                         cstep = E_STEP4;
                     }
                     break;
@@ -285,6 +324,12 @@ u512 Gn::compute_gn()
                     E_STEP3_new_m = sl_tr_result_i->read();
                     E_STEP2_prev_k = prev_k;
 
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(E_STEP3_new_m.to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(E_STEP2_prev_k.to_string(sc_dt::SC_HEX));
+                    }
+
                     cstep = E_STEP2;
                     break;
                 }
@@ -294,6 +339,11 @@ u512 Gn::compute_gn()
                     const u512 &prev_k = E_STEP4_prev_k;
 
                     G_N_STEP2_E = new_m ^ prev_k;
+
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(G_N_STEP2_E.to_string(sc_dt::SC_HEX));
+                    }
 
                     cstep = G_N_STEP2;
                     break;
@@ -315,6 +365,12 @@ u512 Gn::compute_gn()
                     E_STEP1_k = sl_tr_result_i->read();
                     E_STEP1_m = m;
 
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(E_STEP1_k.to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(E_STEP1_m.to_string(sc_dt::SC_HEX));
+                    }
+
                     cstep = E_STEP1;
                     break;
                 }
@@ -325,6 +381,11 @@ u512 Gn::compute_gn()
                     const u512 &e = G_N_STEP2_E;
 
                     result = e ^ h ^ m;
+
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(result.to_string(sc_dt::SC_HEX));
+                    }
 
                     finished = true;
                     break;

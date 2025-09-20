@@ -1,9 +1,10 @@
-#include "datatypes.hxx"
+#include <systemc>
+#include <iostream>
+
+#include <datatypes.hxx>
 #include <control_logic.hxx>
 #include <utils.hxx>
 #include <common.hxx>
-#include <systemc>
-#include <iostream>
 
 namespace streebog_hw
 {
@@ -85,6 +86,15 @@ void ControlLogic::thread()
 
                     events_.emplace_back(g_clock_counter, "Triggering stage", this->name());
                     sc_core::wait(clk_i->posedge_event());
+
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(sigma_o.read().to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(n_o.read().to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(h_o.read().to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(h_o.read().to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(h_o.read().to_string(sc_dt::SC_HEX));
+                    }
 
                     st_trg_o.write(0);
 

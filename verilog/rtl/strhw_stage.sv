@@ -123,11 +123,11 @@ module strhw_stage import strhw_common_types::*; #() (
       h            <= 512'h0;
       n            <= 512'h0;
       sigma        <= 512'h0;
-      
+
       adder_a      <= 512'h0;
       adder_b      <= 512'h0;
 
-    end else begin // at clk_i
+    end else begin // at rst_i
 
       if (istate != BUSY_WAIT_STAGE) begin
         s2_ready     <= 1'd0;
