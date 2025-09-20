@@ -61,7 +61,7 @@ module strhw_control_logic import strhw_common_types::*;  #() (
   uint7                      block_size_next;
   logic                      hash_size_next;
 
-  state_t                    state_next; 
+  state_t                    state_next;
   uint512                    hash_next;
   logic                      st_trg_next;
   uint512                    st_block_next;
@@ -73,7 +73,7 @@ module strhw_control_logic import strhw_common_types::*;  #() (
   always_ff @(posedge clk_i) begin : update_state_on_clk
     if (rst_i) begin
       // reset signals
-      state_o         <= CLEAR; 
+      state_o         <= CLEAR;
       hash_o          <= 512'h0;
       st_trg_o        <= 0;
       st_block_o      <= 512'h0;
