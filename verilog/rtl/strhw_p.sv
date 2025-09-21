@@ -1,4 +1,6 @@
-module strhw_p import strhw_common_types::*; #() (
+`include "strhw_common.svh"
+
+module strhw_p #() (
     input  uint512            a_i,
     output uint512            result_o
   );

@@ -1,4 +1,6 @@
-module strhw_sl import strhw_common_types::*; #() (
+`include "strhw_common.svh"
+
+module strhw_sl #() (
     input  logic              clk_i,
     input  logic              rst_i,
     input  logic              trg_i,
@@ -9,7 +11,6 @@ module strhw_sl import strhw_common_types::*; #() (
   );
 
   localparam QWORD_COUNT = 8;
-  localparam QWORD_SIZE  = 8;
 
   uint64     a_qw     [QWORD_COUNT];
   uint64     result_qw[QWORD_COUNT];
@@ -43,8 +44,8 @@ module strhw_sl import strhw_common_types::*; #() (
 
   always_ff @(posedge clk_i) begin
     if (rst_i) begin
-      for (int i = 0; i < QWORD_COUNT; i++) begin
-        result_qw[i] <= 0;
+      for (int k = 0; k < QWORD_COUNT; k++) begin
+        result_qw[k] <= 0;
       end
 
       c         <= 0;

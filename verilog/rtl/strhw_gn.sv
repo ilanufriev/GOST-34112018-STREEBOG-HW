@@ -1,4 +1,6 @@
-module strhw_gn import strhw_common_types::*; #() (
+`include "strhw_common.svh"
+
+module strhw_gn #() (
 
     input  logic            clk_i,
     input  logic            rst_i,

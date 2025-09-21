@@ -1,4 +1,6 @@
-module strhw_rom import strhw_common_types::*; #(
+`include "strhw_common.svh"
+
+module strhw_rom #(
     parameter WIDTH = 64,
     parameter CAPACITY = 512,
     parameter SL_TABLE_START = 0

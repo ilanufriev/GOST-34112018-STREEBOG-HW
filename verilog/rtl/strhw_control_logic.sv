@@ -1,10 +1,12 @@
-module strhw_control_logic import strhw_common_types::*;  #() (
+`include "strhw_common.svh"
+
+module strhw_control_logic #() (
     input  logic             rst_i,
     input  logic             clk_i,
 
     // Initiator side of the control logic's base interface
     input  logic             trg_i,
-    output state_t           state_o, 
+    output state_t           state_o,
 
     // Initiator side of the control logic's data interface
     input  uint512           block_i,
@@ -70,27 +72,23 @@ module strhw_control_logic import strhw_common_types::*;  #() (
   uint512                    st_n_next;
   uint512                    st_h_next;
 
+  assign st_block_o      = block;
+  assign st_block_size_o = block_size;
+  assign st_sigma_o      = sigma;
+  assign st_n_o          = n;
+  assign st_h_o          = h;
+
   always_ff @(posedge clk_i) begin : update_state_on_clk
     if (rst_i) begin
       // reset signals
       state_o         <= CLEAR;
       hash_o          <= 512'h0;
       st_trg_o        <= 0;
-      st_block_o      <= 512'h0;
-      st_block_size_o <= 7'h0;
-      st_sigma_o      <= 512'h0;
-      st_n_o          <= 512'h0;
-      st_h_o          <= 512'h0;
     end else begin
       // Outputs of the module
       state_o         <= state_next; 
       hash_o          <= hash_next;
       st_trg_o        <= st_trg_next;
-      st_block_o      <= st_block_next;
-      st_block_size_o <= st_block_size_next;
-      st_sigma_o      <= st_sigma_next;
-      st_n_o          <= st_n_next;
-      st_h_o          <= st_h_next;
 
       // Internal registers
       istate          <= istate_next;
@@ -115,11 +113,6 @@ module strhw_control_logic import strhw_common_types::*;  #() (
     state_next         = state_o;
     hash_next          = hash_o;
     st_trg_next        = st_trg_o;
-    st_block_next      = st_block_o;
-    st_block_size_next = st_block_size_o;
-    st_sigma_next      = st_sigma_o;
-    st_n_next          = st_n_o;
-    st_h_next          = st_h_o;
 
     case (istate)
       CLEAR_ST1: begin

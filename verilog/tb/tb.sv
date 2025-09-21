@@ -1,9 +1,9 @@
 `define CLOCK_PERIOD 10
+`include "strhw_common.svh"
 
 module tb;
 
   /* verilator lint_off UNUSEDSIGNAL */
-  import strhw_common_types::*;
 
   byte              buffer[BLOCK_SIZE];
   int               clock_counter;

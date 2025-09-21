@@ -1,4 +1,6 @@
-module strhw_stage import strhw_common_types::*; #() (
+`include "strhw_common.svh"
+
+module strhw_stage #() (
 
     // Inputs from the Control logic
     input  logic             clk_i,
@@ -44,9 +46,6 @@ module strhw_stage import strhw_common_types::*; #() (
   s2_cstep_t                 s2_cstep;
   s3_cstep_t                 s3_cstep;
   uint512                    padded_block;
-  uint512                    h;
-  uint512                    n;
-  uint512                    sigma;
 
   logic                      s2_ready;
   logic                      s3_ready;
@@ -120,14 +119,11 @@ module strhw_stage import strhw_common_types::*; #() (
       g_n_trg_o    <= 1'b0;
 
       padded_block <= 512'h0;
-      h            <= 512'h0;
-      n            <= 512'h0;
-      sigma        <= 512'h0;
 
       adder_a      <= 512'h0;
       adder_b      <= 512'h0;
 
-    end else begin // at rst_i
+    end else begin // at clk_i
 
       if (istate != BUSY_WAIT_STAGE) begin
         s2_ready     <= 1'd0;
@@ -136,9 +132,8 @@ module strhw_stage import strhw_common_types::*; #() (
         if (block_size_i == BLOCK_SIZE) begin : stage2
           case (s2_cstep)
             8'd0: begin
-              h         <= h_i;
-              n         <= n_i;
-              sigma     <= sigma_i;
+              n_new_o     <= n_i;
+              sigma_new_o <= sigma_i;
 
               g_n_n_o   <= n_i;
               g_n_h_o   <= h_i;
@@ -226,9 +221,9 @@ module strhw_stage import strhw_common_types::*; #() (
         else begin : stage3
           case (s3_cstep)
             8'd0: begin
-              h <= h_i;
-              n <= n_i;
-              sigma <= sigma_i;
+              h_new_o <= h_i;
+              n_new_o <= n_i;
+              sigma_new_o <= sigma_i;
 
               s3_cstep <= s3_cstep + 1;
             end
@@ -260,7 +255,7 @@ module strhw_stage import strhw_common_types::*; #() (
               if (g_n_state_i != DONE) begin
                 // do nothing
               end else begin
-                h        <= g_n_result_i;
+                h_new_o        <= g_n_result_i;
                 s3_cstep <= s3_cstep + 1;
               end
             end
@@ -280,7 +275,7 @@ module strhw_stage import strhw_common_types::*; #() (
               if (adder_ready != 1'b1) begin
                 // do nothing
               end else begin
-                n        <= adder_result;
+                n_new_o  <= adder_result;
                 s3_cstep <= s3_cstep + 1;
               end
             end
@@ -300,13 +295,13 @@ module strhw_stage import strhw_common_types::*; #() (
               if (adder_ready != 1'b1) begin
                 // do nothing
               end else begin
-                sigma    <= adder_result;
+                sigma_new_o <= adder_result;
                 s3_cstep <= s3_cstep + 1;
               end
             end
             8'd11: begin
-              g_n_h_o <= h;
-              g_n_m_o <= n;
+              g_n_h_o <= h_new_o;
+              g_n_m_o <= n_new_o;
               g_n_n_o <= 0;
 
               g_n_trg_o <= 1'b1;
@@ -326,13 +321,13 @@ module strhw_stage import strhw_common_types::*; #() (
               if (g_n_state_i != DONE) begin
                 // do nothing
               end else begin
-                h        <= g_n_result_i;
+                h_new_o  <= g_n_result_i;
                 s3_cstep <= s3_cstep + 1;
               end
             end
             8'd14: begin
-              g_n_h_o <= h;
-              g_n_m_o <= sigma;
+              g_n_h_o <= h_new_o;
+              g_n_m_o <= sigma_new_o;
               g_n_n_o <= 0;
 
               g_n_trg_o <= 1'b1;
@@ -353,9 +348,7 @@ module strhw_stage import strhw_common_types::*; #() (
                 // do nothing
               end else begin
                 h_new_o     <= g_n_result_i;
-                n_new_o     <= n;
-                sigma_new_o <= sigma;
-
+                
                 s3_cstep <= s3_cstep + 1;
                 s3_ready <= 1'b1;
               end
@@ -379,4 +372,3 @@ module strhw_stage import strhw_common_types::*; #() (
     end
   end : stage
 endmodule
-

@@ -1,4 +1,6 @@
-module strhw_adder512 import strhw_common_types::*; #() (
+`include "strhw_common.svh"
+
+module strhw_adder512 #() (
     input  logic              clk_i,
     input  logic              rst_i,
     input  logic              trg_i,

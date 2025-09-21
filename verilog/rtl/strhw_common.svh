@@ -1,4 +1,5 @@
-package strhw_common_types;
+`ifndef __STRHW_COMMON_TYPES_SVH__
+`define __STRHW_COMMON_TYPES_SVH__
 
 typedef enum logic[1:0] {
   CLEAR,
@@ -23,7 +24,7 @@ localparam C_SIZE = 12;
 
 localparam BLOCK_SIZE = 64;
 
-localparam ENABLE_DEBUG_OUTPUT = 1;
+localparam ENABLE_DEBUG_OUTPUT = 0;
 
 localparam SL_TABLE_HEIGHT = 8;
 localparam SL_TABLE_WIDTH  = 256;
@@ -558,6 +559,6 @@ localparam uint64 SL_TABLE[8][256] = '{
     64'h9a494faf67707e71, 64'hb3dbd1eca9908293, 64'h72d14d3493b2e388, 64'hd6a30f258c153427
   }
 };
-
 /* verilator lint_on UNUSEDPARAM */
-endpackage
+
+`endif

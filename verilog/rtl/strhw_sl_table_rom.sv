@@ -1,4 +1,6 @@
-module strhw_sl_table_rom import strhw_common_types::*; #() (
+`include "strhw_common.svh"
+
+module strhw_sl_table_rom #() (
     input  logic       clk_i,
     input  logic[10:0] addr_i,
     output uint64      data_o
@@ -39,15 +41,18 @@ module strhw_sl_table_rom import strhw_common_types::*; #() (
       for (int i = 0; i < 4; i++) begin
         $display("SL TABLE ROM data[%d] = %x", i, data[i]);
       end
+
       $display("SL TABLE ROM data_o = %x", data_o);
     end
   end : data_gathering
 
+  /* verilator lint_off WIDTHEXPAND */
+  /* verilator lint_off WIDTHTRUNC */
   always_comb begin : address_mapping
     addr = 0;
     choice = 0;
 
-    for (int i = 0; i < 4; i++) begin
+    for (logic[10:0] i = 0; i < 4; i++) begin
 
       if (ENABLE_DEBUG_OUTPUT && 0) begin
         $display("SL TABLE ROM addr_i = %x", addr_i);
@@ -64,4 +69,7 @@ module strhw_sl_table_rom import strhw_common_types::*; #() (
       end
     end
   end : address_mapping
+
+  /* verialtor lint_on WIDTHEXPAND */
+  /* verialtor lint_on WIDTHTRUNC */
 endmodule
