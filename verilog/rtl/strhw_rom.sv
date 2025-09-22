@@ -13,7 +13,7 @@ module strhw_rom #(
   logic[WIDTH - 1:0] rom[0:CAPACITY - 1] = {
     SL_TABLE[SL_TABLE_START], SL_TABLE[SL_TABLE_START + 1]
   };
-
+  /* verilator lint_off WIDTHTRUNC */
   always_ff @(posedge clk_i) begin
     if (ENABLE_DEBUG_OUTPUT && 0) begin
       $display("STRHW ROM data_o = %x (%d)", rom[addr_i], addr_i);
@@ -21,4 +21,5 @@ module strhw_rom #(
 
     data_o <= rom[addr_i];
   end
+  /* verilator lint_off WIDTHTRUNC */
 endmodule

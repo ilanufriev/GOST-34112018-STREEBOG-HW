@@ -86,20 +86,24 @@ module strhw_sl #() (
         8'd2: begin
           if (j == (QWORD_COUNT)) begin
             // break the loop
-            result_qw[i] <= c;
+            result_qw[i[2:0]] <= c;
 
             i <= i + 1;
             cstep <= 8'd1;
           end else begin
             if (rom_cstep < 2) begin
               // Get data from ROM
+
+              /* verilator lint_off WIDTHTRUNC */
+              // Truncation here is expected and there is nothing we can do
               rom_addr  <= j * SL_TABLE_WIDTH
-                         + ((a_qw[i] >> (j * 8)) & 64'hff);
+                         + ((a_qw[i[2:0]] >> (j * 8)) & 64'hff);
+              /* verilator lint_off WIDTHTRUNC */
 
               rom_cstep <= rom_cstep + 1;
             end else begin
               if (ENABLE_DEBUG_OUTPUT && 1) begin
-                $display("SL a_qw[%d] = %0x", i, a_qw[i]);
+                $display("SL a_qw[%d] = %0x", i, a_qw[i[2:0]]);
                 $display("SL rom_addr = %0x", rom_addr);
                 $display("SL rom_data = %0x", rom_data);
                 $display("SL c ^ rom_data = %0x", c ^ rom_data);
@@ -111,6 +115,10 @@ module strhw_sl #() (
               rom_cstep <= 0;
             end
           end
+        end
+        default: begin
+          $display("Should not be here");
+          cstep <= 8'd0;
         end
       endcase
     end
