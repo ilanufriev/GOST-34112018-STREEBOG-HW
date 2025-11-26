@@ -1,5 +1,4 @@
 #include <array>
-#include <filesystem>
 #include <utils.hxx>
 #include <common.hxx>
 #include <transformations.hxx>
@@ -31,10 +30,7 @@ u512 uint64_ts_to_sc_uint512(uint64_t *array, int64_t size)
 }
 
 PTransform::PTransform(sc_core::sc_module_name const &name)
-    : AUTONAME(a_i)
-    , AUTONAME(result_o)
 {
-    result_o.bind(result_s_);
     SC_METHOD(method);
     sensitive << a_i;
 }
@@ -44,22 +40,29 @@ void PTransform::method()
     u512 result = 0;
     std::array<unsigned char, BLOCK_SIZE> a_bytes;
     std::array<unsigned char, BLOCK_SIZE> result_bytes;
-    
+
     sc_uint512_to_bytes(a_bytes.data(), a_bytes.size(), a_i->read());
 
     for (int i = 0; i < BLOCK_SIZE; i++)
     {
         result_bytes[i] = a_bytes[TAU[i]];
     }
-    
-    result_s_.write(bytes_to_sc_uint512(result_bytes.data(), result_bytes.size()));
+
+    result_o.write(bytes_to_sc_uint512(result_bytes.data(), result_bytes.size()));
+    if (__ENABLE_OUTPUT_LOGGING__)
+    {
+        DEBUG_OUT << "result_o = " 
+                  << bytes_to_sc_uint512(result_bytes.data(), result_bytes.size()).to_string(sc_dt::SC_HEX) << "\n";
+    }
+}
+
+void PTransform::trace(sc_core::sc_trace_file *tf)
+{
+    sc_core::sc_trace(tf, result_o, result_o.name());
 }
 
 SLTransform::SLTransform(sc_core::sc_module_name const &name)
-    : AUTONAME(a_i)
-    , AUTONAME(result_o)
 {
-    result_o.bind(result_s_);
     SC_METHOD(method);
     sensitive << a_i;
 }
@@ -68,10 +71,9 @@ void SLTransform::method()
 {
     std::array<uint64_t, BLOCK_SIZE> a_qw;
     std::array<uint64_t, BLOCK_SIZE> result_qw;
-    
     sc_uint512_to_uint64_ts(a_qw.data(), a_qw.size(), a_i->read());
 
-    for (int i = 0; i < BLOCK_SIZE; i++)
+    for (int i = 0; i < 8; i++)
     {
         uint64_t c = 0;
         for (int64_t j = 0; j < sizeof(c); j++)
@@ -83,70 +85,85 @@ void SLTransform::method()
         result_qw[i] = c;
     }
 
-    result_s_.write(uint64_ts_to_sc_uint512(result_qw.data(), result_qw.size()));
+    result_o.write(uint64_ts_to_sc_uint512(result_qw.data(), result_qw.size()));
+    if (__ENABLE_OUTPUT_LOGGING__)
+    {
+        DEBUG_OUT << "result_o = " 
+                  << uint64_ts_to_sc_uint512(result_qw.data(), result_qw.size()).to_string(sc_dt::SC_HEX) << "\n";
+    }
+}
+
+void SLTransform::trace(sc_core::sc_trace_file *tf)
+{
+    sc_core::sc_trace(tf, result_o, result_o.name());
 }
 
 Gn::Gn(sc_core::sc_module_name const &name)
-    : AUTONAME(m_i)
-    , AUTONAME(n_i)
-    , AUTONAME(h_i)
-    , AUTONAME(start_i)
-    , AUTONAME(ack_i)
-    , AUTONAME(result_o)
-    , AUTONAME(state_o)
-    , AUTONAME(sl_tr_a_o)
-    , AUTONAME(sl_tr_result_i)
-    , AUTONAME(p_tr_a_o)
-    , AUTONAME(p_tr_result_i)
 {
-    result_o.bind(result_s_);
-    state_o.bind(state_s_);
-    sl_tr_a_o.bind(sl_tr_a_s_);
-    p_tr_a_o.bind(p_tr_a_s_);
-
     SC_THREAD(thread);
-
-    state_s_.write(State::CLEAR);
 }
 
 void Gn::thread()
 {
     while (true)
     {
-        switch (state_s_.read())
+        switch (static_cast<State>(state_o.read().to_int()))
         {
             case State::CLEAR:
                 {
-                    result_s_.write(0);
-                    sl_tr_a_s_.write(0);
-                    p_tr_a_s_.write(0);
+                    DEBUG_OUT << "State CLEAR" << " at " << g_clock_counter << " clks" << std::endl;
 
-                    WAIT_WHILE(start_i->read() == 0);
+                    result_o.write(0);
+                    sl_tr_a_o.write(0);
+                    p_tr_a_o.write(0);
+
+                    WAIT_WHILE_CLK_EXPR(trg_i->read() == 0,
+                                    clk_i->posedge_event(), 
+                                    events_.emplace_back(g_clock_counter,
+                                                         "Waiting for trg",
+                                                         this->name()));
 
                     advance_state(State::BUSY);
                     break;
                 }
             case State::BUSY:
                 {
-                    result_s_.write(compute_gn());
+                    DEBUG_OUT << "State BUSY" << " at " << g_clock_counter << " clks" << std::endl;
+                    result_o.write(compute_gn());
                     advance_state(State::DONE);
+
                     break;
                 }
             case State::DONE:
                 {
-                    WAIT_WHILE(ack_i->read() == 0);
+                    DEBUG_OUT << "State DONE" << " at " << g_clock_counter << " clks" << std::endl;
+                    WAIT_WHILE_CLK_EXPR(trg_i->read() == 0,
+                                        clk_i->posedge_event(),
+                                        events_.emplace_back(g_clock_counter,
+                                                             "Waiting for trg in DONE",
+                                                             this->name()));
 
-                    advance_state(State::CLEAR);
+                    advance_state(State::BUSY);
                     break;
                 }
         }
+        events_.emplace_back(g_clock_counter, "Transitioning to another state", this->name());
+        sc_core::wait(clk_i->posedge_event());
     }
+}
+
+void Gn::trace(sc_core::sc_trace_file *tf)
+{
+    sc_core::sc_trace(tf, result_o, result_o.name());
+    sc_core::sc_trace(tf, state_o, state_o.name());
+    sc_core::sc_trace(tf, sl_tr_a_o, sl_tr_a_o.name());
+    sc_core::sc_trace(tf, p_tr_a_o, p_tr_a_o.name());
+    sc_core::sc_trace(tf, clk_i, clk_i.name());
 }
 
 void Gn::advance_state(State next_state)
 {
-    state_s_.write(next_state);
-    WAIT_WHILE(state_s_ != next_state);
+    state_o.write(next_state);
 }
 
 // What you are about to see here is insane.
@@ -201,25 +218,36 @@ u512 Gn::compute_gn()
                     const u512 &prev_k = K_I_prev_k;
                     const u8 &i = K_I_i;
 
-                    DEBUG_OUT << "K_I " << "i = " << u8{i + 1}.to_string(sc_dt::SC_DEC) << std::endl;
-                    DEBUG_OUT << "K_I " << "prev_k = " << prev_k.to_string(sc_dt::SC_HEX) << std::endl;
-
                     r1 = prev_k ^ *C[i.to_int() - 1];
 
-                    p_tr_a_s_.write(r1);
-                    wait_clk(1);
+                    p_tr_a_o.write(r1);
+                    events_.emplace_back(g_clock_counter, "Waiting for P", this->name());
+                    sc_core::wait(clk_i->posedge_event());
 
-                    sl_tr_a_s_.write(p_tr_result_i->read());
-                    wait_clk(1);
-                    
+                    events_.emplace_back(g_clock_counter, "Waiting for SL", this->name());
+                    sl_tr_a_o.write(p_tr_result_i->read());
+                    sc_core::wait(clk_i->posedge_event());
+
                     if (i < C_SIZE)
                     {
                         E_STEP3_prev_k = sl_tr_result_i->read();
+
+                        if (__ENABLE_OUTPUT_LOGGING__)
+                        {
+                            DEBUG_LOG_VAR(E_STEP3_prev_k.to_string(sc_dt::SC_HEX));
+                        }
+
                         cstep = E_STEP3;
                     }
                     else
                     {
                         E_STEP2_prev_k = sl_tr_result_i->read();
+
+                        if (__ENABLE_OUTPUT_LOGGING__)
+                        {
+                            DEBUG_LOG_VAR(E_STEP2_prev_k.to_string(sc_dt::SC_HEX));
+                        }
+
                         cstep = E_STEP2;
                     }
 
@@ -230,17 +258,22 @@ u512 Gn::compute_gn()
                     const u512 &k = E_STEP1_k;
                     const u512 &m = E_STEP1_m;
 
-                    DEBUG_OUT << "E_STEP1 " << "m = " << m.to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "E_STEP1 " << "k = " << k.to_string(sc_dt::SC_HEX) << std::endl;
+                    p_tr_a_o.write(m ^ k);
+                    events_.emplace_back(g_clock_counter, "Waiting for P", this->name());
+                    sc_core::wait(clk_i->posedge_event());
 
-                    p_tr_a_s_.write(m ^ k);
-                    wait_clk(1);
-
-                    sl_tr_a_s_.write(p_tr_result_i->read());
-                    wait_clk(1);
+                    sl_tr_a_o.write(p_tr_result_i->read());
+                    events_.emplace_back(g_clock_counter, "Waiting for SL", this->name());
+                    sc_core::wait(clk_i->posedge_event());
 
                     E_STEP3_new_m = sl_tr_result_i->read();
                     E_STEP2_prev_k = k;
+
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(E_STEP3_new_m.to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(E_STEP2_prev_k.to_string(sc_dt::SC_HEX));
+                    }
 
                     cstep = E_STEP2;
                     break;
@@ -249,10 +282,14 @@ u512 Gn::compute_gn()
                 {
                     const u512 &prev_k = E_STEP2_prev_k;
 
-                    DEBUG_OUT << "E_STEP2 " << "prev_k = " << prev_k.to_string(sc_dt::SC_HEX) << std::endl;
-
                     K_I_i = K_I_i + 1;
                     K_I_prev_k = prev_k;
+
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(K_I_i.to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(K_I_prev_k.to_string(sc_dt::SC_HEX));
+                    }
 
                     if (K_I_i <= C_SIZE)
                     {
@@ -261,6 +298,12 @@ u512 Gn::compute_gn()
                     else
                     {
                         E_STEP4_prev_k = prev_k;
+
+                        if (__ENABLE_OUTPUT_LOGGING__)
+                        {
+                            DEBUG_LOG_VAR(E_STEP4_prev_k.to_string(sc_dt::SC_HEX));
+                        }
+
                         cstep = E_STEP4;
                     }
                     break;
@@ -269,18 +312,23 @@ u512 Gn::compute_gn()
                 {
                     const u512 &new_m = E_STEP3_new_m;
                     const u512 &prev_k = E_STEP3_prev_k;
-                    
-                    DEBUG_OUT << "E_STEP3 " << "new_m = " << new_m.to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "E_STEP3 " << "prev_k = " << prev_k.to_string(sc_dt::SC_HEX) << std::endl;
 
-                    p_tr_a_s_.write(new_m ^ prev_k);
-                    wait_clk(1);
+                    p_tr_a_o.write(new_m ^ prev_k);
+                    events_.emplace_back(g_clock_counter, "Waiting for P", this->name());
+                    sc_core::wait(clk_i->posedge_event());
 
-                    sl_tr_a_s_.write(p_tr_result_i->read());
-                    wait_clk(1);
+                    sl_tr_a_o.write(p_tr_result_i->read());
+                    events_.emplace_back(g_clock_counter, "Waiting for SL", this->name());
+                    sc_core::wait(clk_i->posedge_event());
 
                     E_STEP3_new_m = sl_tr_result_i->read();
                     E_STEP2_prev_k = prev_k;
+
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(E_STEP3_new_m.to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(E_STEP2_prev_k.to_string(sc_dt::SC_HEX));
+                    }
 
                     cstep = E_STEP2;
                     break;
@@ -290,10 +338,12 @@ u512 Gn::compute_gn()
                     const u512 &new_m = E_STEP3_new_m;
                     const u512 &prev_k = E_STEP4_prev_k;
 
-                    DEBUG_OUT << "E_STEP4 " << "new_m = " << new_m.to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "E_STEP4 " << "prev_k = " << prev_k.to_string(sc_dt::SC_HEX) << std::endl;
-
                     G_N_STEP2_E = new_m ^ prev_k;
+
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(G_N_STEP2_E.to_string(sc_dt::SC_HEX));
+                    }
 
                     cstep = G_N_STEP2;
                     break;
@@ -304,18 +354,22 @@ u512 Gn::compute_gn()
                     const u512 &m = m_i->read();
                     const u512 &n = n_i->read();
 
-                    DEBUG_OUT << "G_N_STEP1 " << "h = " << h.to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "G_N_STEP1 " << "m = " << m.to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "G_N_STEP1 " << "n = " << n.to_string(sc_dt::SC_HEX) << std::endl;
+                    p_tr_a_o.write(h ^ n);
+                    events_.emplace_back(g_clock_counter, "Waiting for P", this->name());
+                    sc_core::wait(clk_i->posedge_event());
 
-                    p_tr_a_s_.write(h ^ n);
-                    wait_clk(1);
-
-                    sl_tr_a_s_.write(p_tr_result_i->read());
-                    wait_clk(1);
+                    sl_tr_a_o.write(p_tr_result_i->read());
+                    events_.emplace_back(g_clock_counter, "Waiting for SL", this->name());
+                    sc_core::wait(clk_i->posedge_event());
 
                     E_STEP1_k = sl_tr_result_i->read();
                     E_STEP1_m = m;
+
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(E_STEP1_k.to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(E_STEP1_m.to_string(sc_dt::SC_HEX));
+                    }
 
                     cstep = E_STEP1;
                     break;
@@ -326,13 +380,13 @@ u512 Gn::compute_gn()
                     const u512 &m = m_i->read();
                     const u512 &e = G_N_STEP2_E;
 
-                    DEBUG_OUT << "G_N_STEP2 " << "h = " << h.to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "G_N_STEP2 " << "m = " << m.to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "G_N_STEP2 " << "e = " << e.to_string(sc_dt::SC_HEX) << std::endl;
-
                     result = e ^ h ^ m;
 
-                    DEBUG_OUT << "G_N_STEP2 " << "result = " << result.to_string(sc_dt::SC_HEX) << std::endl;
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(result.to_string(sc_dt::SC_HEX));
+                    }
+
                     finished = true;
                     break;
                 }
@@ -340,6 +394,11 @@ u512 Gn::compute_gn()
     }
 
     return result;
+}
+
+const std::vector<EventTableEntry> &Gn::get_events() const
+{
+    return events_;
 }
 
 const uint64_t sl_precomp_table[8][256] = {

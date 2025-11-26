@@ -5,12 +5,15 @@
 #include <transformations.hxx>
 #include <common.hxx>
 #include <systemc>
+#include <vector>
 
 namespace streebog_hw
 {
 
 struct Stage : public sc_core::sc_module
 {
+    using ScState = sc_dt::sc_uint<32>;
+
     enum State {
         CLEAR,
         BUSY,
@@ -20,27 +23,29 @@ struct Stage : public sc_core::sc_module
     Stage(sc_core::sc_module_name const &name);
 
     void thread();
-    
-    in_port<u512> block_i;
-    in_port<u8>   block_size_i;
-    in_port<u512> sigma_i;
-    in_port<u512> n_i;
-    in_port<u512> h_i;
-    in_port<bool> ack_i;
-    in_port<bool> start_i;
-    
-    out_export<u512>  sigma_nx_o;
-    out_export<u512>  n_nx_o;
-    out_export<u512>  h_nx_o;
-    out_export<State> state_o;
 
-    in_port<u512> g_n_result_i;
-    in_port<Gn::State> g_n_state_i;
-    out_export<u512> g_n_m_o;
-    out_export<u512> g_n_n_o;
-    out_export<u512> g_n_h_o;
-    out_export<bool> g_n_start_o;
-    out_export<bool> g_n_ack_o;
+    sc_core::sc_in<bool> trg_i        {"trg_i"};
+    sc_core::sc_in<u512> block_i      {"block_i"};
+    sc_core::sc_in<u8>   block_size_i {"block_size_i"};
+    sc_core::sc_in<u512> sigma_i      {"sigma_i"};
+    sc_core::sc_in<u512> n_i          {"n_i"};
+    sc_core::sc_in<u512> h_i          {"h_i"};
+    sc_core::sc_in<bool> clk_i        {"clk_i"};
+
+    sc_core::sc_out<u512>  sigma_nx_o {"sigma_nx_o"};
+    sc_core::sc_out<u512>  n_nx_o     {"n_nx_o"};
+    sc_core::sc_out<u512>  h_nx_o     {"h_nx_o"};
+    sc_core::sc_out<ScState> state_o  {"state_o"};
+
+    sc_core::sc_in<u512> g_n_result_i       {"g_n_result_i"};
+    sc_core::sc_in<Gn::ScState> g_n_state_i {"g_n_state_i"};
+    sc_core::sc_out<u512> g_n_m_o           {"g_n_m_o"};
+    sc_core::sc_out<u512> g_n_n_o           {"g_n_n_o"};
+    sc_core::sc_out<u512> g_n_h_o           {"g_n_h_o"};
+    sc_core::sc_out<bool> g_n_trg_o         {"g_n_trg_o"};
+
+    void trace(sc_core::sc_trace_file *tf);
+    const std::vector<EventTableEntry> &get_events() const;
 private:
     void stage2();
     void stage3();
@@ -51,16 +56,7 @@ private:
     u512 n_ = 0;
     u512 sigma_ = 0;
 
-    sc_core::sc_signal<u512>  sigma_nx_s_;
-    sc_core::sc_signal<u512>  n_nx_s_;
-    sc_core::sc_signal<u512>  h_nx_s_;
-    sc_core::sc_signal<State> state_s_;
-
-    sc_core::sc_signal<u512> g_n_m_s_;
-    sc_core::sc_signal<u512> g_n_n_s_;
-    sc_core::sc_signal<u512> g_n_h_s_;
-    sc_core::sc_signal<bool> g_n_start_s_;
-    sc_core::sc_signal<bool> g_n_ack_s_;
+    std::vector<EventTableEntry> events_;
 };
 
 }

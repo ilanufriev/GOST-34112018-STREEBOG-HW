@@ -10,6 +10,8 @@
 namespace streebog_hw
 {
 
+extern int64_t g_clock_counter;
+
 constexpr int8_t BLOCK_SIZE = 64;
 /**
     @brief      Clock cycle duration in nanoseconds.

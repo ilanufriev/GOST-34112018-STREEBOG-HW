@@ -23,7 +23,6 @@ target_include_directories(gost34112018_test PRIVATE
 target_link_directories(gost34112018_test PRIVATE res/lib)
 
 target_link_libraries(gost34112018_test PRIVATE
-    gost34112018
     SystemC::systemc
     Boost::program_options
 )

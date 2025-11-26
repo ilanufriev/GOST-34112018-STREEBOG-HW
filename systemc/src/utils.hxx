@@ -6,18 +6,26 @@
 #define METHOD_NOT_IMPLEMENTED \
     std::cerr << "Method " << __func__ << " was called but is not implemented." << std::endl
 
-#define AUTONAME(__obj) \
-    __obj(#__obj)
-
 #define WAIT_WHILE(__condition) \
     while(__condition) { streebog_hw::wait_clk(1); }
 
-#define __ENABLE_DEBUG_MESSAGES__
-#ifdef __ENABLE_DEBUG_MESSAGES__
+#define WAIT_WHILE_CLK(__condition, __clk_expr) \
+    while(__condition) { sc_core::wait(__clk_expr); }
 
-#define DEBUG_OUT_ENABLED 1
+#define WAIT_WHILE_CLK_EXPR(__condition, __clk_expr, __expr) \
+    while(__condition) { __expr; sc_core::wait(__clk_expr); }
+
+#define __ENABLE_WAVEFORM_TRACING__
+#define __ENABLE_DEBUG_MESSAGES__
+#define __ENABLE_OUTPUT_LOGGING__ 1
+
+#define DEBUG_LOG_VAR(__var) \
+    DEBUG_OUT << #__var << " = " << __var << "\n"
+
+#ifdef __ENABLE_DEBUG_MESSAGES__
+    #define DEBUG_OUT_ENABLED 1
     #define DEBUG_OUT \
-        if (DEBUG_OUT_ENABLED) std::cerr << "[DEBUG] from " << __PRETTY_FUNCTION__ << ", line " << __LINE__ << ": "
+        if (DEBUG_OUT_ENABLED) std::cerr << "[DEBUG] " << ": "
 #else
     #define DEBUG_OUT \
         if (0) std::cerr

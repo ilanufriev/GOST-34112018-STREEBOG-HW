@@ -10,7 +10,8 @@ namespace streebog_hw
 
 struct ControlLogic : public sc_core::sc_module
 {
-    
+    using ScState = sc_dt::sc_uint<32>;
+        
     enum State
     {
         CLEAR,
@@ -28,31 +29,33 @@ struct ControlLogic : public sc_core::sc_module
     void thread();
 
     // Initiator side of I/O
-    in_port<bool> start_i;
-    in_port<bool> reset_i;
-    in_port<u512> block_i;
-    in_port<u8>   block_size_i;
-    in_port<bool> hash_size_i;
-    in_port<bool> ack_i;
-    
-    out_export<State> state_o;
-    out_export<u512>  hash_o;
+    sc_core::sc_in<bool> trg_i        {"trg_i"};
+    sc_core::sc_in<bool> reset_i      {"reset_i"};
+    sc_core::sc_in<u512> block_i      {"block_i"};
+    sc_core::sc_in<u8>   block_size_i {"block_size_i"};
+    sc_core::sc_in<bool> hash_size_i  {"hash_size_i"};
+    sc_core::sc_in<bool> clk_i        {"clk_i"};
+
+    sc_core::sc_out<ScState> state_o {"state_o"};
+    sc_core::sc_out<u512>    hash_o  {"hash_o"};
 
     // Stage block side of I/O
-    in_port<u512>         sigma_nx_i;
-    in_port<u512>         n_nx_i;
-    in_port<u512>         h_nx_i;
-    in_port<Stage::State> st_state_i;
+    sc_core::sc_in<u512>           sigma_nx_i {"sigma_nx_i"};
+    sc_core::sc_in<u512>           n_nx_i     {"n_nx_i"};
+    sc_core::sc_in<u512>           h_nx_i     {"h_nx_i"};
+    sc_core::sc_in<Stage::ScState> st_state_i {"st_state_i"};
 
-    out_export<u512> st_block_o;
-    out_export<u8>   st_block_size_o;
-    out_export<u512> sigma_o;
-    out_export<u512> n_o;
-    out_export<u512> h_o;
-    out_export<bool> st_ack_o;
-    out_export<bool> st_start_o;
+    sc_core::sc_out<u512> st_block_o      {"st_block_o"};
+    sc_core::sc_out<u8>   st_block_size_o {"st_block_size_o"};
+    sc_core::sc_out<u512> sigma_o         {"sigma_o"};
+    sc_core::sc_out<u512> n_o             {"n_o"};
+    sc_core::sc_out<u512> h_o             {"h_o"};
+    sc_core::sc_out<bool> st_trg_o        {"st_trg_o"};
 
+    void trace(sc_core::sc_trace_file *tf);
+    const std::vector<EventTableEntry> &get_events() const;
 private:
+
     void advance_state(State next_state);
 
     u512 block_;
@@ -63,17 +66,7 @@ private:
     u512 h_;
     u512 n_;
 
-    sc_core::sc_signal<State> state_s_;
-    sc_core::sc_signal<u512>  hash_s_;
-
-    sc_core::sc_signal<u512>  st_block_s_;
-    sc_core::sc_signal<u8>    st_block_size_s_;
-    sc_core::sc_signal<u512>  sigma_s_;
-    sc_core::sc_signal<u512>  n_s_;
-    sc_core::sc_signal<u512>  h_s_;
-    sc_core::sc_signal<bool>  st_ack_s_;
-    sc_core::sc_signal<bool>  st_start_s_;
-    sc_core::sc_signal<bool>  st_sel_s_;
+    std::vector<EventTableEntry> events_;
 };
 
 }

@@ -7,6 +7,8 @@
 namespace streebog_hw
 {
 
+int64_t g_clock_counter = 0;
+
 const u8 PI[256] = {
     252, 238, 221,  17, 207, 110,  49,  22,
     251, 196, 250, 218,  35, 197,   4,  77,

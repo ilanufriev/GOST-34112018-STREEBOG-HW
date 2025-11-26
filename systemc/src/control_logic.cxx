@@ -1,68 +1,52 @@
+#include <systemc>
+#include <iostream>
+
+#include <datatypes.hxx>
 #include <control_logic.hxx>
 #include <utils.hxx>
 #include <common.hxx>
-#include <systemc>
-#include <iostream>
 
 namespace streebog_hw
 {
 
 ControlLogic::ControlLogic(sc_core::sc_module_name const &name)
-    : AUTONAME(start_i)
-    , AUTONAME(reset_i)
-    , AUTONAME(block_i)
-    , AUTONAME(block_size_i)
-    , AUTONAME(hash_size_i)
-    , AUTONAME(ack_i)
-    , AUTONAME(state_o)
-    , AUTONAME(hash_o)
-    , AUTONAME(sigma_nx_i)
-    , AUTONAME(n_nx_i)
-    , AUTONAME(h_nx_i)
-    , AUTONAME(st_state_i)
-    , AUTONAME(st_block_o)
-    , AUTONAME(st_block_size_o)
-    , AUTONAME(sigma_o)
-    , AUTONAME(n_o)
-    , AUTONAME(h_o)
-    , AUTONAME(st_ack_o)
-    , AUTONAME(st_start_o)
 {
-    state_o.bind(state_s_);
-    hash_o.bind(hash_s_);
-    st_block_o.bind(st_block_s_);
-    st_block_size_o.bind(st_block_size_s_);
-    sigma_o.bind(sigma_s_);
-    n_o.bind(n_s_);
-    h_o.bind(h_s_);
-    st_ack_o.bind(st_ack_s_);
-    st_start_o.bind(st_start_s_);
-
     SC_THREAD(thread);
+}
 
-    state_s_.write(ControlLogic::State::CLEAR);
+void ControlLogic::trace(sc_core::sc_trace_file *tf)
+{
+    sc_core::sc_trace(tf, state_o, state_o.name());
+    sc_core::sc_trace(tf, hash_o, hash_o.name());
+    sc_core::sc_trace(tf, st_block_o, st_block_o.name());
+    sc_core::sc_trace(tf, st_block_size_o, st_block_size_o.name());
+    sc_core::sc_trace(tf, sigma_o, sigma_o.name());
+    sc_core::sc_trace(tf, n_o, n_o.name());
+    sc_core::sc_trace(tf, h_o, h_o.name());
+    sc_core::sc_trace(tf, st_trg_o, st_trg_o.name());
+    sc_core::sc_trace(tf, clk_i, clk_i.name());
 }
 
 void ControlLogic::thread()
 {
     while (true)
     {
-        switch (state_s_.read())
+        switch (static_cast<ControlLogic::State>(state_o->read().to_int()))
         {
             case State::CLEAR:
                 {
-                    hash_s_.write(0);
-                    st_block_s_.write(0);
-                    st_block_size_s_.write(0);
-                    sigma_s_.write(0);
-                    n_s_.write(0);
-                    h_s_.write(0);
-                    st_ack_s_.write(0);
-                    st_start_s_.write(0);
-                    st_sel_s_.write(0);
+                    hash_o.write(0);
+                    st_block_o.write(0);
+                    st_block_size_o.write(0);
+                    sigma_o.write(0);
+                    n_o.write(0);
+                    h_o.write(0);
+                    st_trg_o.write(0);
 
-                    DEBUG_OUT << "State CLEAR" << std::endl;
-                    WAIT_WHILE(start_i->read() == 0);
+                    DEBUG_OUT << "State CLEAR" << " at " << g_clock_counter << " clks" << std::endl;
+                    WAIT_WHILE_CLK_EXPR(trg_i->read() == 0, 
+                                    clk_i->posedge_event(),
+                                    events_.emplace_back(g_clock_counter, "Waiting for trg", this->name()));
 
                     hash_size_ = hash_size_i->read();
 
@@ -72,55 +56,61 @@ void ControlLogic::thread()
                                              : INIT_VECTOR_256;
 
                     advance_state(State::BUSY);
-                    break;
+                    break; // Do not wait for a next posedge.
                 }
             case State::BUSY:
                 {
                     State next_state;
 
-                    DEBUG_OUT << "State BUSY" << std::endl;
+                    DEBUG_OUT << "State BUSY" << " at " << g_clock_counter << " clks" << std::endl;
                     block_      = block_i->read();
                     block_size_ = block_size_i->read();
 
                     if (block_size_ == 64)
                     {
-                        st_sel_s_.write(0);
                         next_state = State::READY;
                     }
                     else
                     {
-                        st_sel_s_.write(1);
                         next_state = State::DONE;
                     }
 
-                    sigma_s_.write(sigma_);
-                    n_s_.write(n_);
-                    h_s_.write(h_);
+                    sigma_o.write(sigma_);
+                    n_o.write(n_);
+                    h_o.write(h_);
 
-                    st_block_s_.write(block_);
-                    st_block_size_s_.write(block_size_);
+                    st_block_o.write(block_);
+                    st_block_size_o.write(block_size_);
 
-                    st_start_s_.write(1);
+                    st_trg_o.write(1);
 
-                    WAIT_WHILE(st_state_i->read() != Stage::State::BUSY);
+                    events_.emplace_back(g_clock_counter, "Triggering stage", this->name());
+                    sc_core::wait(clk_i->posedge_event());
 
-                    st_start_s_.write(0);
+                    if (__ENABLE_OUTPUT_LOGGING__)
+                    {
+                        DEBUG_LOG_VAR(sigma_o.read().to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(n_o.read().to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(h_o.read().to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(h_o.read().to_string(sc_dt::SC_HEX));
+                        DEBUG_LOG_VAR(h_o.read().to_string(sc_dt::SC_HEX));
+                    }
 
-                    WAIT_WHILE(st_state_i->read() != Stage::State::DONE);
+                    st_trg_o.write(0);
+
+                    WAIT_WHILE_CLK_EXPR(st_state_i->read() != Stage::State::BUSY,
+                        clk_i->posedge_event(),
+                            events_.emplace_back(g_clock_counter, 
+                                                 "Waiting for the stage to become busy", this->name()));
+
+                    WAIT_WHILE_CLK_EXPR(st_state_i->read() != Stage::State::DONE,
+                        clk_i->posedge_event(),
+                        events_.emplace_back(g_clock_counter,
+                                                "Waiting for the stage to become done", this->name()));
 
                     sigma_ = sigma_nx_i->read();
                     n_     = n_nx_i->read();
                     h_     = h_nx_i->read();
-
-                    DEBUG_OUT << "sigma_nx_i = " << sigma_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "n_nx_i = " << n_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-                    DEBUG_OUT << "h_nx_i = " << h_nx_i->read().to_string(sc_dt::SC_HEX) << std::endl;
-
-                    st_ack_s_.write(1);
-
-                    WAIT_WHILE(st_state_i->read() != Stage::State::CLEAR);
-
-                    st_ack_s_.write(0);
 
                     if (next_state == State::DONE)
                     {
@@ -132,28 +122,41 @@ void ControlLogic::thread()
                 }
             case State::READY:
                 {
-                    DEBUG_OUT << "State READY" << std::endl;
-                    WAIT_WHILE(start_i->read() == 0);
+                    DEBUG_OUT << "State READY" << " at " << g_clock_counter << " clks" << std::endl;
+                    WAIT_WHILE_CLK_EXPR(trg_i->read() == 0,
+                        clk_i->posedge_event(),
+                            events_.emplace_back(g_clock_counter,
+                                                 "Waiting for trg in READY", this->name()));
 
                     advance_state(State::BUSY);
                     break;
                 }
             case State::DONE:
                 {
-                    DEBUG_OUT << "State DONE" << std::endl;
-                    WAIT_WHILE(ack_i->read() == 0);
+                    DEBUG_OUT << "State DONE" << " at " << g_clock_counter << " clks" << std::endl;
+                    WAIT_WHILE_CLK_EXPR(trg_i->read() == 0,
+                        clk_i->posedge_event(),
+                        events_.emplace_back(g_clock_counter,
+                                             "Waiting for trg in DONE", this->name()));
 
                     advance_state(State::CLEAR);
                     break;
                 }
         }
+
+        events_.emplace_back(g_clock_counter, "Transitioning to another state", this->name());
+        sc_core::wait(clk_i->posedge_event());
     }
+}
+
+const std::vector<EventTableEntry> &ControlLogic::get_events() const
+{
+    return events_;
 }
 
 void ControlLogic::advance_state(State next_state)
 {
-    state_s_.write(next_state);
-    WAIT_WHILE(state_s_.read() != next_state);
+    state_o.write(next_state);
 }
 
 };
